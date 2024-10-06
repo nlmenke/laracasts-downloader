@@ -4,4 +4,4 @@ checks:
     php: true
 tools:
     php_cs_fixer:
-        config: { level: psr2 }
+        config: { level: psr12 }

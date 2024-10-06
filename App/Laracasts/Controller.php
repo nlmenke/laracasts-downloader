@@ -1,25 +1,31 @@
 <?php
-
+/**
+ * Laracasts Controller.
+ */
 
 namespace App\Laracasts;
-
 
 use App\Html\Parser;
 use App\Http\Resolver;
 use App\Utils\SeriesCollection;
 use App\Utils\Utils;
 
+/**
+ * Class Controller.
+ *
+ * @package App\Laracasts
+ */
 class Controller
 {
     /**
-     * @var \App\Http\Resolver
+     * @var Resolver
      */
     private $client;
 
     /**
-     * Controller constructor.
-     *
      * @param Resolver $client
+     *
+     * @return void
      */
     public function __construct(Resolver $client)
     {
@@ -27,13 +33,38 @@ class Controller
     }
 
     /**
-     *  Gets all series using scraping
+     * @param array $filters
      *
-     * @param array $cachedData
-     * @param bool $cacheOnly
      * @return array
      */
-    public function getSeries($cachedData, $cacheOnly = false)
+    public function getFilteredSeries(array $filters): array
+    {
+        $seriesCollection = new SeriesCollection([]);
+
+        foreach ($filters as $seriesSlug => $filteredEpisodes) {
+            $seriesHtml = $this->client->getHtml("series/$seriesSlug");
+
+            $series = Parser::getSeriesData($seriesHtml);
+
+            $episodeHtml = $this->client->getHtml($series['path'] . '/episodes/1');
+
+            $series['episodes'] = Parser::getEpisodesData($episodeHtml, $filteredEpisodes);
+
+            $seriesCollection->add($series);
+        }
+
+        return $seriesCollection->get();
+    }
+
+    /**
+     * Gets all series using scraping.
+     *
+     * @param array $cachedData
+     * @param bool  $cacheOnly
+     *
+     * @return array
+     */
+    public function getSeries(array $cachedData, bool $cacheOnly = false): array
     {
         $seriesCollection = new SeriesCollection($cachedData);
 
@@ -44,30 +75,31 @@ class Controller
         $topics = Parser::getTopicsData($this->client->getTopicsHtml());
 
         foreach ($topics as $topic) {
-
             // TODO: It's not gonna work fine because each series may have multiple topics
-            if ($this->isTopicUpdated($seriesCollection, $topic))
+            if ($this->isTopicUpdated($seriesCollection, $topic)) {
                 continue;
+            }
 
             Utils::box($topic['slug']);
 
             $topicHtml = $this->client->getHtml($topic['path']);
 
-            $series = Parser::getSeriesDataFromTopic($topicHtml);
+            $seriesData = Parser::getSeriesDataFromTopic($topicHtml);
 
-            foreach ($series as $serie) {
-                if ($this->isSerieUpdated($seriesCollection, $serie))
+            foreach ($seriesData as $series) {
+                if ($this->isSeriesUpdated($seriesCollection, $series)) {
                     continue;
+                }
 
-                Utils::writeln("Getting serie: {$serie['slug']} ...");
+                Utils::writeln("Getting series: {$series['slug']}...");
 
-                $serie['topic'] = $topic['slug'];
+                $series['topic'] = $topic['slug'];
 
-                $episodeHtml = $this->client->getHtml($serie['path'] . '/episodes/1');
+                $episodeHtml = $this->client->getHtml($series['path'] . '/episodes/1');
 
-                $serie['episodes'] = Parser::getEpisodesData($episodeHtml);
+                $series['episodes'] = Parser::getEpisodesData($episodeHtml);
 
-                $seriesCollection->add($serie);
+                $seriesCollection->add($series);
             }
         }
 
@@ -78,74 +110,54 @@ class Controller
         $bits = Parser::extractLarabitsSeries($larabitsHtml);
 
         foreach ($bits as $bit) {
-            Utils::writeln("Getting serie: $bit ...");
+            Utils::writeln("Getting series: $bit...");
 
-            $seriHtml = $this->client->getHtml(LARACASTS_BASE_URL . '/series/' . $bit);
+            $seriesHtml = $this->client->getHtml(LARACASTS_BASE_URL . '/series/' . $bit);
 
-            $serie = Parser::getSerieData($seriHtml);
+            $series = Parser::getSeriesData($seriesHtml);
 
-            $serie['topic'] = 'larabits';
+            $series['topic'] = 'larabits';
 
-            $episodeHtml = $this->client->getHtml($serie['path'] . '/episodes/1');
+            $episodeHtml = $this->client->getHtml($series['path'] . '/episodes/1');
 
-            $serie['episodes'] = Parser::getEpisodesData($episodeHtml);
+            $series['episodes'] = Parser::getEpisodesData($episodeHtml);
 
-            $seriesCollection->add($serie);
+            $seriesCollection->add($series);
         }
 
         return $seriesCollection->get();
     }
-
-    public function getFilteredSeries($filters)
-    {
-        $seriesCollection = new SeriesCollection([]);
-
-        foreach($filters as $serieSlug => $filteredEpisodes) {
-            $seriesHtml = $this->client->getHtml("series/$serieSlug");
-
-            $serie = Parser::getSerieData($seriesHtml);
-
-            $episodeHtml = $this->client->getHtml($serie['path'] . '/episodes/1');
-
-            $serie['episodes'] = Parser::getEpisodesData($episodeHtml, $filteredEpisodes);
-
-            $seriesCollection->add($serie);
-        }
-
-        return $seriesCollection->get();
-    }
-
 
     /**
-     *  Determine is specific topic has been changed compared to cached data
+     * Determine if specific topic has been changed compared to cached data.
      *
      * @param SeriesCollection $series
-     * @param array $topic
+     * @param array            $topic
+     *
      * @return bool
      * */
-    public function isTopicUpdated($series, $topic)
+    public function isTopicUpdated(SeriesCollection $series, array $topic): bool
     {
         $series = $series->where('topic', $topic['slug']);
 
-        return
-            $series->exists()
-            and
-            $topic['series_count'] == $series->count()
-            and
-            $topic['episode_count'] == $series->sum('episode_count', true);
+        return $series->exists()
+            && $topic['series_count'] == $series->count()
+            && $topic['episode_count'] == $series->sum('episode_count', true);
     }
 
     /**
-     * Determine is specific series has been changed compared to cached data
+     * Determine if specific series has been changed compared to cached data.
      *
-     * @param SeriesCollection $series
-     * @param array $serie
+     * @param SeriesCollection $seriesList
+     * @param array            $series
+     *
      * @return bool
      */
-    private function isSerieUpdated($series, $serie)
+    private function isSeriesUpdated(SeriesCollection $seriesList, array $series): bool
     {
-        $target = $series->where('slug', $serie['slug'])->first();
+        $target = $seriesList->where('slug', $series['slug'])->first();
 
-        return ! is_null($target) and (count($target['episodes']) == $serie['episode_count']);
+        return !is_null($target)
+            && (count($target['episodes']) == $series['episode_count']);
     }
 }

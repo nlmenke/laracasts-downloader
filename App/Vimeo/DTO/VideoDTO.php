@@ -1,13 +1,21 @@
 <?php
+/**
+ * Vimeo Video DTO.
+ */
 
 namespace App\Vimeo\DTO;
 
+/**
+ * Class VideoDTO.
+ *
+ * @package App\Vimeo\DTO
+ */
 class VideoDTO
 {
     /**
      * @var string
      */
-    private $masterURL;
+    private $masterUrl;
 
     /**
      * @var array
@@ -17,56 +25,56 @@ class VideoDTO
     /**
      * @return string
      */
-    public function getMasterURL()
+    public function getMasterUrl(): string
     {
-        return $this->masterURL;
-    }
-
-    /**
-     * @param  string  $masterURL
-     *
-     * @return self
-     */
-    public function setMasterURL($masterURL)
-    {
-        $this->masterURL = $masterURL;
-
-        return $this;
+        return $this->masterUrl;
     }
 
     /**
      * @return array
      */
-    public function getStreams()
+    public function getStreams(): array
     {
         return $this->streams;
     }
 
     /**
-     * @param  array  $streams
-     *
-     * @return self
+     * @return string|null
      */
-    public function setStreams(array $streams)
-    {
-        $this->streams = $streams;
-
-        return $this;
-    }
-
-    /**
-     * @return null|string
-     */
-    public function getVideoIdByQuality()
+    public function getVideoIdByQuality(): ?string
     {
         $id = null;
 
         foreach ($this->getStreams() as $stream) {
             if ($stream['quality'] === getenv('VIDEO_QUALITY')) {
-                $id = explode("-", $stream['id'])[0];
+                $id = explode('-', $stream['id'])[0];
             }
         }
 
         return $id;
+    }
+
+    /**
+     * @param string $masterUrl
+     *
+     * @return self
+     */
+    public function setMasterUrl(string $masterUrl): VideoDTO
+    {
+        $this->masterUrl = $masterUrl;
+
+        return $this;
+    }
+
+    /**
+     * @param array $streams
+     *
+     * @return self
+     */
+    public function setStreams(array $streams): VideoDTO
+    {
+        $this->streams = $streams;
+
+        return $this;
     }
 }
