@@ -66,15 +66,13 @@ class Downloader
      * @param HttpClient $httpClient
      * @param Filesystem $system
      * @param Ubench     $bench
-     * @param bool       $retryDownload
      */
     public function __construct(
         HttpClient $httpClient,
         Filesystem $system,
-        Ubench $bench,
-        bool $retryDownload = false
+        Ubench $bench
     ) {
-        $this->client = new Resolver($httpClient, $bench, $retryDownload);
+        $this->client = new Resolver($httpClient, $bench);
         $this->system = new SystemController($system);
         $this->bench = $bench;
         $this->laracasts = new LaracastsController($this->client);
@@ -134,10 +132,13 @@ class Downloader
         Utils::box('Downloading Series');
 
         foreach ($newEpisodes as $series) {
-            $this->system->createSeriesFolderIfNotExists($series['slug']);
+            $seriesFolder = Utils::cleanNameForWindows($series['title'])
+                . ' (' . $series['episodes'][0]['series']['year'] . ')';
+
+            $this->system->createSeriesFolderIfNotExists($seriesFolder);
 
             foreach ($series['episodes'] as $episode) {
-                if ($this->client->downloadEpisode($series['slug'], $episode) === false) {
+                if (!$this->client->downloadEpisode($series['slug'], $episode)) {
                     $counter['failed_episode'] = $counter['failed_episode'] + 1;
                 }
 

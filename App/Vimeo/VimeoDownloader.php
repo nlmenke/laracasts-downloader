@@ -43,6 +43,10 @@ class VimeoDownloader
      */
     public function download(int $vimeoId, string $filepath): bool
     {
+        if (file_exists($filepath)) {
+            return true;
+        }
+
         $video = $this->repository->get($vimeoId);
 
         $master = $this->repository->getMaster($video);
@@ -55,6 +59,7 @@ class VimeoDownloader
 
         foreach ($sources as $source) {
             $filename = $master->getClipId() . $source['extension'];
+
             $this->downloadSource(
                 $master->resolveUrl($source['base_url']),
                 $source,
@@ -135,6 +140,8 @@ class VimeoDownloader
     ): bool {
         $code = 0;
         $output = [];
+
+        $outputPath = str_replace(['$'], ['\$'], $outputPath);
 
         if (PHP_OS == 'WINNT') {
             $command = "ffmpeg -i \"$videoPath\" -i \"$audioPath\" -vcodec copy -acodec copy -strict -2 \"$outputPath\" 2> nul";

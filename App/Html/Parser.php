@@ -40,21 +40,18 @@ class Parser
         return [
             'slug' => $series['slug'],
             'path' => LARACASTS_BASE_URL . $series['path'],
+            'title' => rtrim($series['title']),
+            'body' => rtrim(strip_tags(str_replace('</p><p>', "\n\n", $series['body']))),
+            'thumbnail' => $series['thumbnail'],
             'episode_count' => $series['episodeCount'],
             'is_complete' => $series['complete'],
+            'difficulty_level' => $series['difficulty_level'],
+            'taxonomy' => $series['taxonomy']['name'],
+            'author' => [
+                'name' => $series['author']['profile']['full_name'],
+                'image' => $series['author']['avatar'],
+            ],
         ];
-    }
-
-    /**
-     * @param string $html
-     *
-     * @return string
-     */
-    public static function getCsrfToken(string $html): string
-    {
-        preg_match('/"csrfToken": \'(\S+)\'/', $html, $matches);
-
-        return $matches[1];
     }
 
     /**
@@ -83,7 +80,10 @@ class Parser
 
         $data = self::getData($episodeHtml);
 
-        $chapters = $data['props']['series']['chapters'];
+        $series = $data['props']['series'];
+        $chapters = $series['chapters'];
+
+        $seriesYear = date_create_from_format('F j, Y', $chapters[0]['episodes'][0]['dateSegments']['published'])->format('Y');
 
         foreach ($chapters as $chapter) {
             foreach ($chapter['episodes'] as $episode) {
@@ -98,9 +98,26 @@ class Parser
                 }
 
                 $episodes[] = [
-                    'title' => $episode['title'],
+                    'title' => rtrim($episode['title']),
                     'vimeo_id' => $episode['vimeoId'],
                     'number' => $episode['position'],
+                    'desc' => rtrim(strip_tags(str_replace('</p><p>', "\n\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
+                    'published' => $episode['dateSegments']['published'],
+                    'series' => [
+                        'title' => rtrim($series['title']),
+                        'desc' => trim(strip_tags(str_replace('</p><p>', "\n\n", $series['body']))),
+                        'thumb' => $series['thumbnail'],
+                        'collections' => array_unique([$series['difficultyLevel'], $series['taxonomy']['name']]),
+                        'author' => [
+                            'name' => $series['author']['profile']['full_name'],
+                            'image' => $series['author']['avatar'],
+                        ],
+                        'year' => $seriesYear,
+                    ],
+                    'chapters' => [
+                        'number' => $chapter['number'],
+                        'heading' => $chapter['heading'],
+                    ],
                 ];
             }
         }
@@ -156,6 +173,7 @@ class Parser
             return [
                 'slug' => str_replace(LARACASTS_BASE_URL . '/topics/', '', $topic['path']),
                 'path' => $topic['path'],
+                'name' => $topic['name'],
                 'episode_count' => $topic['episode_count'],
                 'series_count' => $topic['series_count'],
             ];

@@ -93,7 +93,7 @@ class Controller
 
                 Utils::writeln("Getting series: {$series['slug']}...");
 
-                $series['topic'] = $topic['slug'];
+                $series['topic'] = $topic['name'];
 
                 $episodeHtml = $this->client->getHtml($series['path'] . '/episodes/1');
 

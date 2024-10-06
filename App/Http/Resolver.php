@@ -6,6 +6,7 @@
 namespace App\Http;
 
 use App\Html\Parser;
+use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use App\Vimeo\VimeoDownloader;
 use Exception;
@@ -13,6 +14,8 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Query;
+use League\Flysystem\Adapter\Local as LocalAdapter;
+use League\Flysystem\Filesystem;
 use Ubench;
 
 /**
@@ -44,25 +47,23 @@ class Resolver
     private $cookies;
 
     /**
-     * Reattempt download on connection fail.
-     *
-     * @var int
+     * @var SystemController
      */
-    private $retryDownload = false;
+    private $system;
 
     /**
      * @param Client $client
      * @param Ubench $bench
-     * @param bool   $retryDownload
      *
      * @return void
      */
-    public function __construct(Client $client, Ubench $bench, bool $retryDownload = false)
+    public function __construct(Client $client, Ubench $bench)
     {
         $this->client = $client;
         $this->cookies = new CookieJar();
         $this->bench = $bench;
-        $this->retryDownload = $retryDownload;
+
+        $this->system = new SystemController(new Filesystem(new LocalAdapter(BASE_FOLDER)));
     }
 
     /**
@@ -78,13 +79,16 @@ class Resolver
         try {
             $number = sprintf('%02d', $episode['number']);
             $name = $episode['title'];
-            $filepath = $this->getFilename($seriesSlug, $number, $name);
+            $filepath = $this->getFilename($episode);
+
+            if (file_exists($filepath . '.mp4')) {
+                return true;
+            }
 
             Utils::writeln(
                 sprintf(
-                    'Download started: %s... Saving in %s',
-                    $number . ' - ' . $name,
-                    SERIES_FOLDER . '/' . $seriesSlug
+                    'Download started: %s...',
+                    $number . ' - ' . $name
                 )
             );
 
@@ -93,11 +97,11 @@ class Resolver
             if (!$source or $source === 'laracasts') {
                 $downloadLink = $this->getLaracastsLink($seriesSlug, $episode['number']);
 
-                return $this->downloadVideo($downloadLink, $filepath);
+                return $this->downloadVideo($downloadLink, $filepath . '.mp4');
             } else {
                 $vimeoDownloader = new VimeoDownloader();
 
-                return $vimeoDownloader->download($episode['vimeo_id'], $filepath);
+                return $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
             }
         } catch (RequestException $e) {
             Utils::write($e->getMessage());
@@ -245,27 +249,46 @@ class Resolver
     }
 
     /**
-     * @param string $seriesSlug
-     * @param string $number
-     * @param string $episodeName
+     * @param array $episode
      *
      * @return string
      */
-    private function getFilename(
-        string $seriesSlug,
-        string $number,
-        string $episodeName
-    ): string {
-        return BASE_FOLDER
+    private function getFilename(array $episode): string {
+        $series = $episode['series'];
+        $seriesTitleYear = Utils::cleanNameForWindows($series['title']) . ' (' . $series['year'] . ')';
+
+        $filename = BASE_FOLDER
             . DIRECTORY_SEPARATOR
             . SERIES_FOLDER
             . DIRECTORY_SEPARATOR
-            . $seriesSlug
+            . $seriesTitleYear
+            . DIRECTORY_SEPARATOR;
+
+        // separate chapters into season folders
+        $chapterNumber = '01';
+        if ($episode['chapter']['number'] !== null) {
+            $chapterNumber = sprintf('%02d', $episode['chapter']['number']);
+        }
+
+        $chapterFolder = 'Season ' . $chapterNumber;
+
+        $this->system->createFolderIfNotExists(
+            SERIES_FOLDER
             . DIRECTORY_SEPARATOR
-            . $number
-            . '-'
-            . Utils::parseEpisodeName($episodeName)
-            . '.mp4';
+            . $seriesTitleYear
+            . DIRECTORY_SEPARATOR
+            . $chapterFolder
+        );
+
+        $episodeNumber = sprintf('%02d', $episode['number']);
+
+        $filename .= $chapterFolder
+            . DIRECTORY_SEPARATOR
+            . $seriesTitleYear
+            . ' - s' . $chapterNumber . 'e' . $episodeNumber
+            . ' - ' . Utils::cleanNameForWindows($episode['title']);
+
+        return $filename;
     }
 
     /**
