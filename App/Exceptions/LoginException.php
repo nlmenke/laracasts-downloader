@@ -1,13 +1,15 @@
 <?php
 /**
- * Login Exception
+ * Login Exception.
  */
+
 namespace App\Exceptions;
 
 use Exception;
 
 /**
- * Class LoginException
+ * Class LoginException.
+ *
  * @package App\Exceptions
  */
 class LoginException extends Exception

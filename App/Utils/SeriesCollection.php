@@ -1,9 +1,15 @@
 <?php
-
+/**
+ * Series Collection.
+ */
 
 namespace App\Utils;
 
-
+/**
+ * class SeriesCollection.
+ *
+ * @package App\Utils
+ */
 class SeriesCollection
 {
     /**
@@ -11,66 +17,95 @@ class SeriesCollection
      */
     private $series;
 
+    /**
+     * @param array $series
+     *
+     * @return void
+     */
     public function __construct(array $series)
     {
         $this->series = $series;
     }
 
     /**
-     * @param string $key
-     * @param string $value
-     * @return $this
+     * @param array $series
+     *
+     * @return void
      */
-    public function where($key, $value)
+    public function add(array $series)
     {
-        $series = [];
-
-        foreach ($this->series as $serie) {
-            if ($serie[$key] == $value) {
-                array_push($series, $serie);
-            }
-        }
-
-        return new SeriesCollection($series);
+        $this->series[$series['slug']] = $series;
     }
 
-    public function sum($key, $actual)
+    /**
+     * @return int
+     */
+    public function count(): int
+    {
+        return count($this->series);
+    }
+
+    /**
+     * @return bool
+     */
+    public function exists(): bool
+    {
+        return !empty($this->series);
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function first()
+    {
+        return $this->exists() ? $this->series[0] : null;
+    }
+
+    /**
+     * @return array
+     */
+    public function get(): array
+    {
+        return $this->series;
+    }
+
+    /**
+     * @param string $key
+     * @param bool   $actual
+     *
+     * @return int
+     */
+    public function sum(string $key, bool $actual): int
     {
         $sum = 0;
 
-        foreach ($this->series as $serie) {
+        foreach ($this->series as $series) {
             if ($actual) {
-                $sum += intval(count($serie[str_replace('_count', '', $key) . 's']));
+                $sum += count($series[str_replace('_count', '', $key) . 's']);
             } else {
-                $sum += intval($serie[$key]);
+                $sum += intval($series[$key]);
             }
         }
 
         return $sum;
     }
 
-    public function count()
+    /**
+     * @param string $key
+     * @param string $value
+     *
+     * @return $this
+     */
+    public function where(string $key, string $value): SeriesCollection
     {
-        return (int) count($this->series);
-    }
+        $seriesList = [];
 
-    public function get()
-    {
-        return $this->series;
-    }
+        foreach ($this->series as $series) {
+            if ($series[$key] == $value) {
+                $seriesList[] = $series;
+            }
+        }
 
-    public function exists()
-    {
-        return ! empty($this->series);
-    }
-
-    public function first()
-    {
-        return $this->exists() ? $this->series[0] : null;
-    }
-
-    public function add($serie)
-    {
-        $this->series[$serie['slug']] = $serie;
+        return new SeriesCollection($seriesList);
     }
 }

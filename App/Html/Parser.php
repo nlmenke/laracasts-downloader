@@ -1,6 +1,6 @@
 <?php
 /**
- * Dom Parser
+ * Dom Parser.
  */
 
 namespace App\Html;
@@ -8,84 +8,76 @@ namespace App\Html;
 use Symfony\Component\DomCrawler\Crawler;
 
 /**
- * Class Parser
+ * Class Parser.
  *
  * @package App\Html
  */
 class Parser
 {
     /**
-     * Return list of topics data
-     *
      * @param string $html
+     *
      * @return array
      */
-    public static function getTopicsData($html)
+    public static function extractLarabitsSeries(string $html): array
     {
-        $data = self::getData($html);
+        $html = str_replace('\/', '/', html_entity_decode($html));
 
-        return array_map(function($topic) {
-            return [
-                'slug' => str_replace(LARACASTS_BASE_URL . '/topics/', '', $topic['path']),
-                'path' => $topic['path'],
-                'episode_count' => $topic['episode_count'],
-                'series_count' => $topic['series_count']
-            ];
-        }, $data['props']['topics']);
-    }
+        preg_match_all('/\/series\/([a-z-]+-larabits)/', $html, $matches);
 
-
-    public static function getSerieData($serieHtml)
-    {
-        $data = self::getData($serieHtml);
-
-        return self::extractSerieData($data['props']['series']);
+        return array_unique($matches[1]);
     }
 
     /**
-     * Return full list of series for given topic HTML page.
+     * Extracts the required data for each series.
      *
-     * @param string $html
+     * @param array $series
+     *
      * @return array
      */
-    public static function getSeriesDataFromTopic($html)
-    {
-        $data = self::getData($html);
-
-        $series = $data['props']['topic']['series'];
-
-        return array_combine(
-            array_column($series, 'slug'),
-            array_map(function($serie) {
-                return self::extractSerieData($serie);
-            }, $series)
-        );
-    }
-
-    /**
-     * Only extracts data we need for each serie and returns them
-     *
-     * @param array $serie
-     * @return array
-     */
-    public static function extractSerieData($serie)
+    public static function extractSeriesData(array $series): array
     {
         return [
-            'slug' => $serie['slug'],
-            'path' => LARACASTS_BASE_URL . $serie['path'],
-            'episode_count' => $serie['episodeCount'],
-            'is_complete' => $serie['complete']
+            'slug' => $series['slug'],
+            'path' => LARACASTS_BASE_URL . $series['path'],
+            'episode_count' => $series['episodeCount'],
+            'is_complete' => $series['complete'],
         ];
     }
 
     /**
-     * Return full list of episodes for given series HTML page.
+     * @param string $html
      *
+     * @return string
+     */
+    public static function getCsrfToken(string $html): string
+    {
+        preg_match('/"csrfToken": \'(\S+)\'/', $html, $matches);
+
+        return $matches[1];
+    }
+
+    /**
      * @param string $episodeHtml
-     * @param number[] $filteredEpisodes
+     *
+     * @return string
+     */
+    public static function getEpisodeDownloadLink(string $episodeHtml): string
+    {
+        $data = self::getData($episodeHtml);
+
+        return $data['props']['downloadLink'];
+    }
+
+    /**
+     * Returns a full list of episodes for given series.
+     *
+     * @param string        $episodeHtml
+     * @param array<number> $filteredEpisodes
+     *
      * @return array
      */
-    public static function getEpisodesData($episodeHtml, $filteredEpisodes = [])
+    public static function getEpisodesData(string $episodeHtml, array $filteredEpisodes = []): array
     {
         $episodes = [];
 
@@ -96,19 +88,19 @@ class Parser
         foreach ($chapters as $chapter) {
             foreach ($chapter['episodes'] as $episode) {
                 // TODO: It's not the parser responsibility to filter episodes
-                if (! empty($filteredEpisodes) and ! in_array($episode['position'], $filteredEpisodes)) {
+                if (!empty($filteredEpisodes) && !in_array($episode['position'], $filteredEpisodes)) {
                     continue;
                 }
 
                 // vimeoId is null for upcoming episodes
-                if (! $episode['vimeoId']) {
+                if (!$episode['vimeoId']) {
                     continue;
                 }
 
                 $episodes[] = [
                     'title' => $episode['title'],
                     'vimeo_id' => $episode['vimeoId'],
-                    'number' => $episode['position']
+                    'number' => $episode['position'],
                 ];
             }
         }
@@ -116,32 +108,67 @@ class Parser
         return $episodes;
     }
 
-    public static function getEpisodeDownloadLink($episodeHtml)
+    /**
+     * @param string $seriesHtml
+     *
+     * @return array
+     */
+    public static function getSeriesData(string $seriesHtml): array
     {
-        $data = self::getData($episodeHtml);
+        $data = self::getData($seriesHtml);
 
-        return $data['props']['downloadLink'];
+        return self::extractSeriesData($data['props']['series']);
     }
 
-    public static function extractLarabitsSeries($html)
+    /**
+     * Returns a full list of series for given topic.
+     *
+     * @param string $html
+     *
+     * @return array
+     */
+    public static function getSeriesDataFromTopic(string $html): array
     {
-        $html = str_replace('\/', '/', html_entity_decode($html));
+        $data = self::getData($html);
 
-        preg_match_all('"\/series\/([a-z-]+-larabits)"', $html, $matches);
+        $series = $data['props']['topic']['series'] ?? [];
 
-        return array_unique($matches[1]);
+        return array_combine(
+            array_column($series, 'slug'),
+            array_map(function ($series) {
+                return self::extractSeriesData($series);
+            }, $series)
+        );
     }
 
-    public static function getCsrfToken($html)
+    /**
+     * Returns a list of topics data.
+     *
+     * @param string $html
+     *
+     * @return array
+     */
+    public static function getTopicsData(string $html): array
     {
-        preg_match('/"csrfToken": \'([^\s]+)\'/', $html, $matches);
+        $data = self::getData($html);
 
-        return $matches[1];
+        return array_map(function ($topic) {
+            return [
+                'slug' => str_replace(LARACASTS_BASE_URL . '/topics/', '', $topic['path']),
+                'path' => $topic['path'],
+                'episode_count' => $topic['episode_count'],
+                'series_count' => $topic['series_count'],
+            ];
+        }, $data['props']['topics']);
     }
 
-    public static function getUserData($html)
+    /**
+     * @param string $html
+     *
+     * @return array
+     */
+    public static function getUserData(string $html): array
     {
-
         $data = self::getData($html);
 
         $props = $data['props'];
@@ -149,21 +176,22 @@ class Parser
         return [
             'error' => empty($props['errors']) ? null : $props['errors']['auth'],
             'signedIn' => $props['auth']['signedIn'],
-            'data' => $props['auth']['user']
+            'data' => $props['auth']['user'],
         ];
     }
 
     /**
-     * Returns decoded version of data-page attribute in HTML page
+     * Returns decoded version of data-page attribute.
      *
      * @param string $html
+     *
      * @return array
      */
-    private static function getData($html)
+    private static function getData(string $html): array
     {
         $parser = new Crawler($html);
 
-        $data = $parser->filter("#app")->attr('data-page');
+        $data = $parser->filter('#app')->attr('data-page');
 
         return json_decode($data, true);
     }

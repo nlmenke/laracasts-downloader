@@ -1,11 +1,11 @@
 <?php
-
 /**
- * App start point
+ * App start point.
  */
-use League\Flysystem\Filesystem;
-use League\Flysystem\Adapter\Local as Adapter;
+
 use App\System\Controller;
+use League\Flysystem\Adapter\Local as Adapter;
+use League\Flysystem\Filesystem;
 
 require_once 'bootstrap.php';
 

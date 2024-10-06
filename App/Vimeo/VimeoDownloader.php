@@ -1,18 +1,33 @@
 <?php
+/**
+ * Vimeo Downloader.
+ */
 
 namespace App\Vimeo;
 
 use App\Utils\Utils;
 use GuzzleHttp\Client;
 
+/**
+ * Class VimeoDownloader.
+ *
+ * @package App\Vimeo
+ */
 class VimeoDownloader
 {
-    /** @var VimeoRepository */
-    private $repository;
-
-    /** @var Client */
+    /**
+     * @var Client
+     */
     public $client;
 
+    /**
+     * @var VimeoRepository
+     */
+    private $repository;
+
+    /**
+     * @return void
+     */
     public function __construct()
     {
         $this->client = new Client();
@@ -21,9 +36,12 @@ class VimeoDownloader
     }
 
     /**
+     * @param int    $vimeoId
+     * @param string $filepath
+     *
      * @return bool
      */
-    public function download($vimeoId, $filepath)
+    public function download(int $vimeoId, string $filepath): bool
     {
         $video = $this->repository->get($vimeoId);
 
@@ -36,9 +54,9 @@ class VimeoDownloader
         $filenames = [];
 
         foreach ($sources as $source) {
-            $filename = $master->getClipId().$source['extension'];
+            $filename = $master->getClipId() . $source['extension'];
             $this->downloadSource(
-                $master->resolveURL($source['base_url']),
+                $master->resolveUrl($source['base_url']),
                 $source,
                 $filename
             );
@@ -48,21 +66,18 @@ class VimeoDownloader
         return $this->mergeSources($filenames[0], $filenames[1], $filepath);
     }
 
-    private function downloadSource($baseURL, $sourceData, $filepath)
-    {
-        file_put_contents($filepath, base64_decode($sourceData['init_segment'], true));
-
-        $segmentURLs = array_map(function($segment) use ($baseURL) {
-            return $baseURL.$segment['url'];
-        }, $sourceData['segments']);
-
-        $sizes = array_column($sourceData['segments'], 'size');
-
-        $this->downloadSegments($segmentURLs, $filepath, $sizes);
-    }
-
-    private function downloadSegments($segmentURLs, $filepath, $sizes)
-    {
+    /**
+     * @param array  $segmentUrls
+     * @param string $filepath
+     * @param array  $sizes
+     *
+     * @return void
+     */
+    private function downloadSegments(
+        array $segmentUrls,
+        string $filepath,
+        array $sizes
+    ): void {
         $type = strpos($filepath, 'm4v') !== false ? 'video' : 'audio';
         Utils::writeln("Downloading $type...");
 
@@ -70,8 +85,8 @@ class VimeoDownloader
 
         $totalBytes = array_sum($sizes);
 
-        foreach ($segmentURLs as $index => $segmentURL) {
-            $request = $this->client->createRequest('GET', $segmentURL, [
+        foreach ($segmentUrls as $index => $segmentUrl) {
+            $request = $this->client->createRequest('GET', $segmentUrl, [
                 'save_to' => fopen($filepath, 'a'),
             ]);
 
@@ -84,21 +99,47 @@ class VimeoDownloader
     }
 
     /**
-     * @param  string  $videoPath
-     * @param  string  $audioPath
-     * @param  string  $outputPath
+     * @param string $baseUrl
+     * @param array  $sourceData
+     * @param string $filepath
+     *
+     * @return void
+     */
+    private function downloadSource(
+        string $baseUrl,
+        array $sourceData,
+        string $filepath
+    ): void {
+        file_put_contents($filepath, base64_decode($sourceData['init_segment'], true));
+
+        $segmentURLs = array_map(function ($segment) use ($baseUrl) {
+            return $baseUrl . $segment['url'];
+        }, $sourceData['segments']);
+
+        $sizes = array_column($sourceData['segments'], 'size');
+
+        $this->downloadSegments($segmentURLs, $filepath, $sizes);
+    }
+
+    /**
+     * @param string $videoPath
+     * @param string $audioPath
+     * @param string $outputPath
      *
      * @return bool
      */
-    private function mergeSources($videoPath, $audioPath, $outputPath)
-    {
+    private function mergeSources(
+        string $videoPath,
+        string $audioPath,
+        string $outputPath
+    ): bool {
         $code = 0;
         $output = [];
 
-        if (PHP_OS=='WINNT'){
+        if (PHP_OS == 'WINNT') {
             $command = "ffmpeg -i \"$videoPath\" -i \"$audioPath\" -vcodec copy -acodec copy -strict -2 \"$outputPath\" 2> nul";
         } else {
-            $command = "ffmpeg -i '$videoPath' -i '$audioPath' -vcodec copy -acodec copy -strict -2 '$outputPath' >/dev/null 2>&1";
+            $command = "ffmpeg -i \"$videoPath\" -i \"$audioPath\" -vcodec copy -acodec copy -strict -2 \"$outputPath\" >/dev/null 2>&1";
         }
 
         exec($command, $output, $code);

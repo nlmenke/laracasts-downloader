@@ -1,6 +1,6 @@
 <?php
 /**
- * Utilities
+ * Utilities.
  */
 
 namespace App\Utils;
@@ -9,134 +9,88 @@ use GuzzleHttp\Event\ProgressEvent;
 use GuzzleHttp\Message\RequestInterface;
 
 /**
- * Class Utils
+ * Class Utils.
  *
  * @package App\Utils
  */
 class Utils
 {
     /**
-     * New line supporting cli or browser.
+     * Echos text in a nice box.
      *
-     * @return string
+     * @param string $text
      */
-    public static function newLine()
+    public static function box(string $text)
     {
-        if (php_sapi_name() == "cli") {
-            return "\n";
-        }
-
-        return "<br>";
-    }
-
-    /**
-     * Counts the episodes from the array.
-     *
-     * @param $array
-     * @return int
-     */
-    public static function countEpisodes($array)
-    {
-        $total = 0;
-
-        foreach ($array as $serie) {
-            $total += count($serie['episodes']);
-        }
-
-        return $total;
+        echo self::newLine();
+        echo '====================================' . self::newLine();
+        echo $text . self::newLine();
+        echo '====================================' . self::newLine();
     }
 
     /**
      * Compare two arrays and returns the diff array.
      *
-     * @param $onlineListArray
-     * @param $localListArray
+     * @param array $onlineListArray
+     * @param array $localListArray
+     *
      * @return array
      */
-    public static function compareLocalAndOnlineSeries($onlineListArray, $localListArray)
+    public static function compareLocalAndOnlineSeries(array $onlineListArray, array $localListArray): array
     {
         $seriesCollection = new SeriesCollection([]);
 
-        foreach ($onlineListArray as $serieSlug => $serie) {
-
-            if (array_key_exists($serieSlug, $localListArray)) {
-                if ($serie['episode_count'] == count($localListArray[$serieSlug])) {
+        foreach ($onlineListArray as $seriesSlug => $series) {
+            if (array_key_exists($seriesSlug, $localListArray)) {
+                if ($series['episode_count'] == count($localListArray[$seriesSlug])) {
                     continue;
                 }
 
-                $episodes = $serie['episodes'];
-                $serie['episodes'] = [];
+                $episodes = $series['episodes'];
+                $series['episodes'] = [];
 
                 foreach ($episodes as $episode) {
-                    if (! in_array($episode['number'], $localListArray[$serieSlug])) {
-                        $serie['episodes'][] = $episode;
+                    if (!in_array($episode['number'], $localListArray[$seriesSlug])) {
+                        $series['episodes'][] = $episode;
                     }
                 }
-
-                $seriesCollection->add($serie);
-            } else {
-                $seriesCollection->add($serie);
             }
+
+            $seriesCollection->add($series);
         }
 
         return $seriesCollection->get();
     }
 
     /**
-     * Echo's text in a nice box.
+     * Counts the episodes from the array.
      *
-     * @param $text
+     * @param array $array
+     *
+     * @return int
      */
-    public static function box($text)
+    public static function countEpisodes(array $array): int
     {
-        echo self::newLine();
-        echo "====================================" . self::newLine();
-        echo $text . self::newLine();
-        echo "====================================" . self::newLine();
+        $total = 0;
+
+        foreach ($array as $series) {
+            $total += count($series['episodes']);
+        }
+
+        return $total;
     }
 
     /**
-     * Echo's a message.
+     * Converts bytes to precision.
      *
-     * @param $text
-     */
-    public static function write($text)
-    {
-        echo "> " . $text . self::newLine();
-    }
-
-    /**
-     * Remove specials chars that windows does not support for filenames.
-     *
-     * @param $name
-     * @return mixed
-     */
-    public static function parseEpisodeName($name)
-    {
-        return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
-    }
-
-    /**
-     * Echo's a message in a new line.
-     *
-     * @param $text
-     */
-    public static function writeln($text)
-    {
-        echo self::newLine();
-        echo "> " . $text . self::newLine();
-    }
-
-    /**
-     * Convert bytes to precision
-     *
-     * @param $bytes
+     * @param int $bytes
      * @param int $precision
+     *
      * @return string
      */
-    public static function formatBytes($bytes, $precision = 2)
+    public static function formatBytes(int $bytes, int $precision = 2): string
     {
-        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
 
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
@@ -148,36 +102,93 @@ class Utils
     }
 
     /**
-     * Calculate a percentage
+     * Calculate a percentage.
      *
-     * @param $cur
-     * @param $total
+     * @param int $cur
+     * @param int $total
+     *
      * @return float
      */
-    public static function getPercentage($cur, $total)
+    public static function getPercentage(int $cur, int $total): float
     {
-        // Hide warning division by zero
+        // hide warning division by zero
         return round(@($cur / $total * 100));
     }
 
     /**
-     * @param RequestInterface $request
-     * @param int $downloadedBytes
-     * @param int|null $totalBytes
-    */
-    public static function showProgressBar($request, $downloadedBytes, $totalBytes = null)
+     * New line supporting cli or browser.
+     *
+     * @return string
+     */
+    public static function newLine(): string
     {
         if (php_sapi_name() == "cli") {
-            $request->getEmitter()->on('progress', function(ProgressEvent $e) use ($downloadedBytes, $totalBytes) {
+            return "\n";
+        }
 
+        return '<br>';
+    }
+
+    /**
+     * Removes special chars that windows does not support for filenames.
+     *
+     * @param string $name
+     *
+     * @return array<string>|string|null
+     */
+    public static function parseEpisodeName(string $name)
+    {
+        return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
+    }
+
+    /**
+     * @param RequestInterface $request
+     * @param int              $downloadedBytes
+     * @param int|null         $totalBytes
+     *
+     * @return void
+     */
+    public static function showProgressBar(
+        RequestInterface $request,
+        int $downloadedBytes,
+        int $totalBytes = null
+    ): void {
+        if (php_sapi_name() == 'cli') {
+            $request->getEmitter()->on('progress', function (ProgressEvent $e) use ($downloadedBytes, $totalBytes) {
                 $totalBytes = $totalBytes ?? $e->downloadSize;
 
-                printf("> Downloaded %s of %s (%d%%)      \r",
+                printf(
+                    "> Downloaded %s of %s (%d%%)\r",
                     Utils::formatBytes($e->downloaded + $downloadedBytes),
                     Utils::formatBytes($totalBytes),
                     Utils::getPercentage($e->downloaded + $downloadedBytes, $totalBytes)
                 );
             });
         }
+    }
+
+    /**
+     * Echos a message.
+     *
+     * @param string $text
+     *
+     * @return void
+     */
+    public static function write(string $text): void
+    {
+        echo '> ' . $text . self::newLine();
+    }
+
+    /**
+     * Echos a message in a new line.
+     *
+     * @param string $text
+     *
+     * @return void
+     */
+    public static function writeln(string $text): void
+    {
+        echo self::newLine();
+        echo '> ' . $text . self::newLine();
     }
 }
