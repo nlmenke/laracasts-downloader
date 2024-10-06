@@ -137,6 +137,15 @@ class Downloader
 
             $this->system->createSeriesFolderIfNotExists($seriesFolder);
 
+            $this->client->createSeriesNfoFile(
+                $series,
+                BASE_FOLDER
+                . DIRECTORY_SEPARATOR
+                . SERIES_FOLDER
+                . DIRECTORY_SEPARATOR
+                . $seriesFolder
+            );
+
             foreach ($series['episodes'] as $episode) {
                 if (!$this->client->downloadEpisode($series['slug'], $episode)) {
                     $counter['failed_episode'] = $counter['failed_episode'] + 1;

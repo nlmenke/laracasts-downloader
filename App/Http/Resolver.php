@@ -9,6 +9,7 @@ use App\Html\Parser;
 use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use App\Vimeo\VimeoDownloader;
+use DOMDocument;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
@@ -67,6 +68,80 @@ class Resolver
     }
 
     /**
+     * Creates an NFO file for the series.
+     *
+     * @see https://kodi.wiki/view/NFO_files/TV_shows
+     *
+     * @param array  $series
+     * @param string $seriesFolder
+     *
+     * @return void
+     */
+    public function createSeriesNfoFile(array $series, string $seriesFolder): void
+    {
+        // download poster too
+        if (isset($series['thumbnail'])) {
+            $fileInfo = pathinfo($series['thumbnail']);
+
+            if (!file_exists('poster.' . $fileInfo['extension'])) {
+                $poster = @file_get_contents($series['thumbnail']);
+
+                if ($poster === false) {
+                    if (strpos($series['thumbnail'], '//', 8) !== false) {
+                        $series['thumbnail'] = preg_replace('/(?<!:)\/\//', '/', $series['thumbnail']);
+                    }
+
+                    if (preg_match('/\/(gif|jpe?g|png|svg|webp)\//', $series['thumbnail'])) {
+                        $series['thumbnail'] = preg_replace('/\/(gif|jpe?g|png|svg|webp)\//', '/', $series['thumbnail']);
+                    }
+
+                    $poster = file_get_contents($series['thumbnail']);
+                }
+
+                file_put_contents($seriesFolder . DIRECTORY_SEPARATOR . 'poster.' . $fileInfo['extension'], $poster);
+            }
+        }
+
+        if (file_exists($seriesFolder . DIRECTORY_SEPARATOR . 'tvshow.nfo')) {
+            return;
+        }
+
+        $premiered = date_create_from_format('F j, Y', $series['episodes'][0]['published']);
+
+        $difficulty = '';
+        if ($series['difficulty_level'] !== null) {
+            $difficulty = "<tag>{$series['difficulty_level']}</tag>";
+        }
+
+        $xml = <<<xml
+<tvshow>
+    <title>{$series['title']}</title>
+    <plot>{$series['body']}</plot>
+    <year>{$premiered->format('Y')}</year>
+    <premiered>{$premiered->format('Y-m-d')}</premiered>
+    <genre>Tutorial</genre>
+    {$difficulty}
+    <tag>{$series['taxonomy']}</tag>
+    <tag>{$series['topic']}</tag>
+    <studio>Laracasts</studio>
+    <language>en</language>
+    <mpaa>NR</mpaa>
+    <actor>
+        <name>{$series['author']['name']}</name>
+        <role>Instructor</role>
+        <thumb>{$series['author']['image']}</thumb>
+    </actor>
+</tvshow>
+xml;
+
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml);
+        $dom->save($seriesFolder . DIRECTORY_SEPARATOR . 'tvshow.nfo', LIBXML_NOEMPTYTAG);
+    }
+
+    /**
      * Downloads the episode of the series.
      *
      * @param string $seriesSlug
@@ -97,12 +172,16 @@ class Resolver
             if (!$source or $source === 'laracasts') {
                 $downloadLink = $this->getLaracastsLink($seriesSlug, $episode['number']);
 
-                return $this->downloadVideo($downloadLink, $filepath . '.mp4');
+                $isDownloaded = $this->downloadVideo($downloadLink, $filepath . '.mp4');
             } else {
                 $vimeoDownloader = new VimeoDownloader();
 
-                return $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
+                $isDownloaded = $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
             }
+
+            $this->createEpisodeNfoFile($episode, $filepath);
+
+            return $isDownloaded;
         } catch (RequestException $e) {
             Utils::write($e->getMessage());
 
@@ -203,6 +282,46 @@ class Resolver
         $html = $response->getBody()->getContents();
 
         return Parser::getUserData($html);
+    }
+
+    /**
+     * Creates an NFO file for the episode.
+     *
+     * @see https://kodi.wiki/view/NFO_files/Episodes
+     *
+     * @param array  $episode
+     * @param string $filepath
+     *
+     * @return void
+     */
+    private function createEpisodeNfoFile(array $episode, string $filepath): void
+    {
+        $publishedDate = date_create_from_format('F j, Y', $episode['published'])->format('Y-m-d');
+
+        $xml = <<<xml
+<episodedetails>
+    <uniqueid type="vimeo" default="true">{$episode['vimeo_id']}</uniqueid>
+    <season>{$episode['chapter']['number']}</season>
+    <episode>{$episode['number']}</episode>
+    <title>{$episode['title']}</title>
+    <plot>{$episode['desc']}</plot>
+    <aired>{$publishedDate}</aired>
+    <writer>{$episode['series']['author']['name']}</writer>
+    <director>{$episode['series']['author']['name']}</director>
+    <mpaa>NR</mpaa>
+    <actor>
+        <name>{$episode['series']['author']['name']}</name>
+        <role>Instructor</role>
+        <thumb>{$episode['series']['author']['image']}</thumb>
+    </actor>
+</episodedetails>
+xml;
+
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml);
+        $dom->save($filepath. '.nfo', LIBXML_NOEMPTYTAG);
     }
 
     /**

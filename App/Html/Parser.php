@@ -101,11 +101,11 @@ class Parser
                     'title' => rtrim($episode['title']),
                     'vimeo_id' => $episode['vimeoId'],
                     'number' => $episode['position'],
-                    'desc' => rtrim(strip_tags(str_replace('</p><p>', "\n\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
+                    'desc' => rtrim(strip_tags(str_replace('</p><p>', "\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
                     'published' => $episode['dateSegments']['published'],
                     'series' => [
                         'title' => rtrim($series['title']),
-                        'desc' => trim(strip_tags(str_replace('</p><p>', "\n\n", $series['body']))),
+                        'desc' => trim(strip_tags(str_replace('</p><p>', "\n", $series['body']))),
                         'thumb' => $series['thumbnail'],
                         'collections' => array_unique([$series['difficultyLevel'], $series['taxonomy']['name']]),
                         'author' => [
