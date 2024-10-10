@@ -4,10 +4,12 @@ config.ini
 config.ini~
 .gitignore~
 vendor
+downloads
 cacert.pem
 
 .env
 
+*.m4[av]
 *.mp4
 
 App/.DS_Store
@@ -15,4 +17,3 @@ App/.DS_Store
 .DS_Store
 
 .phpintel/
-Downloads/cache.php

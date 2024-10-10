@@ -29,6 +29,18 @@ class Utils
     }
 
     /**
+     * Removes special chars that windows does not support.
+     *
+     * @param string $name
+     *
+     * @return array<string>|string|null
+     */
+    public static function cleanNameForWindows(string $name)
+    {
+        return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
+    }
+
+    /**
      * Compare two arrays and returns the diff array.
      *
      * @param array $onlineListArray
@@ -127,18 +139,6 @@ class Utils
         }
 
         return '<br>';
-    }
-
-    /**
-     * Removes special chars that windows does not support for filenames.
-     *
-     * @param string $name
-     *
-     * @return array<string>|string|null
-     */
-    public static function parseEpisodeName(string $name)
-    {
-        return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
     }
 
     /**

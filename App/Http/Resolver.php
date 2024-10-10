@@ -6,13 +6,17 @@
 namespace App\Http;
 
 use App\Html\Parser;
+use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use App\Vimeo\VimeoDownloader;
+use DOMDocument;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Query;
+use League\Flysystem\Adapter\Local as LocalAdapter;
+use League\Flysystem\Filesystem;
 use Ubench;
 
 /**
@@ -44,25 +48,74 @@ class Resolver
     private $cookies;
 
     /**
-     * Reattempt download on connection fail.
-     *
-     * @var int
+     * @var SystemController
      */
-    private $retryDownload = false;
+    private $system;
 
     /**
      * @param Client $client
      * @param Ubench $bench
-     * @param bool   $retryDownload
      *
      * @return void
      */
-    public function __construct(Client $client, Ubench $bench, bool $retryDownload = false)
+    public function __construct(Client $client, Ubench $bench)
     {
         $this->client = $client;
         $this->cookies = new CookieJar();
         $this->bench = $bench;
-        $this->retryDownload = $retryDownload;
+
+        $this->system = new SystemController(new Filesystem(new LocalAdapter(BASE_FOLDER)));
+    }
+
+    /**
+     * Creates an NFO file for the series.
+     *
+     * @see https://kodi.wiki/view/NFO_files/TV_shows
+     *
+     * @param array  $series
+     * @param string $seriesFolder
+     *
+     * @return void
+     */
+    public function createSeriesNfoFile(array $series, string $seriesFolder): void
+    {
+        if (file_exists($seriesFolder . DIRECTORY_SEPARATOR . 'tvshow.nfo')) {
+            return;
+        }
+
+        $premiered = date_create_from_format('F j, Y', $series['episodes'][0]['published']);
+
+        $difficulty = '';
+        if ($series['difficulty_level'] !== null) {
+            $difficulty = "<tag>{$series['difficulty_level']}</tag>";
+        }
+
+        $xml = <<<xml
+<tvshow>
+    <title>{$series['title']}</title>
+    <plot>{$series['body']}</plot>
+    <year>{$premiered->format('Y')}</year>
+    <premiered>{$premiered->format('Y-m-d')}</premiered>
+    <genre>Tutorial</genre>
+    {$difficulty}
+    <tag>{$series['taxonomy']}</tag>
+    <tag>{$series['topic']}</tag>
+    <studio>Laracasts</studio>
+    <language>en</language>
+    <mpaa>NR</mpaa>
+    <actor>
+        <name>{$series['author']['name']}</name>
+        <role>Instructor</role>
+        <thumb>{$series['author']['image']}</thumb>
+    </actor>
+</tvshow>
+xml;
+
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml);
+        $dom->save($seriesFolder . DIRECTORY_SEPARATOR . 'tvshow.nfo', LIBXML_NOEMPTYTAG);
     }
 
     /**
@@ -78,13 +131,16 @@ class Resolver
         try {
             $number = sprintf('%02d', $episode['number']);
             $name = $episode['title'];
-            $filepath = $this->getFilename($seriesSlug, $number, $name);
+            $filepath = $this->getFilename($episode);
+
+            if (file_exists($filepath . '.mp4')) {
+                return true;
+            }
 
             Utils::writeln(
                 sprintf(
-                    'Download started: %s... Saving in %s',
-                    $number . ' - ' . $name,
-                    SERIES_FOLDER . '/' . $seriesSlug
+                    'Download started: %s...',
+                    $number . ' - ' . $name
                 )
             );
 
@@ -93,16 +149,53 @@ class Resolver
             if (!$source or $source === 'laracasts') {
                 $downloadLink = $this->getLaracastsLink($seriesSlug, $episode['number']);
 
-                return $this->downloadVideo($downloadLink, $filepath);
+                $isDownloaded = $this->downloadVideo($downloadLink, $filepath . '.mp4');
             } else {
                 $vimeoDownloader = new VimeoDownloader();
 
-                return $vimeoDownloader->download($episode['vimeo_id'], $filepath);
+                $isDownloaded = $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
             }
+
+            $this->createEpisodeNfoFile($episode, $filepath);
+
+            return $isDownloaded;
         } catch (RequestException $e) {
             Utils::write($e->getMessage());
 
             return false;
+        }
+    }
+
+    /**
+     * Downloads the series poster.
+     *
+     * @param $series
+     * @param $seriesFolder
+     *
+     * @return void
+     */
+    public function downloadPoster($series, $seriesFolder): void
+    {
+        if (isset($series['thumbnail'])) {
+            $fileInfo = pathinfo($series['thumbnail']);
+
+            if (!file_exists('poster.' . $fileInfo['extension'])) {
+                $poster = @file_get_contents($series['thumbnail']);
+
+                if ($poster === false) {
+                    if (strpos($series['thumbnail'], '//', 8) !== false) {
+                        $series['thumbnail'] = preg_replace('/(?<!:)\/\//', '/', $series['thumbnail']);
+                    }
+
+                    if (preg_match('/\/(gif|jpe?g|png|svg|webp)\//', $series['thumbnail'])) {
+                        $series['thumbnail'] = preg_replace('/\/(gif|jpe?g|png|svg|webp)\//', '/', $series['thumbnail']);
+                    }
+
+                    $poster = file_get_contents($series['thumbnail']);
+                }
+
+                file_put_contents($seriesFolder . DIRECTORY_SEPARATOR . 'poster.' . $fileInfo['extension'], $poster);
+            }
         }
     }
 
@@ -202,6 +295,46 @@ class Resolver
     }
 
     /**
+     * Creates an NFO file for the episode.
+     *
+     * @see https://kodi.wiki/view/NFO_files/Episodes
+     *
+     * @param array  $episode
+     * @param string $filepath
+     *
+     * @return void
+     */
+    private function createEpisodeNfoFile(array $episode, string $filepath): void
+    {
+        $publishedDate = date_create_from_format('F j, Y', $episode['published']);
+
+        $xml = <<<xml
+<episodedetails>
+    <uniqueid type="vimeo" default="true">{$episode['vimeo_id']}</uniqueid>
+    <season>{$episode['chapter']['number']}</season>
+    <episode>{$episode['number']}</episode>
+    <title>{$episode['title']}</title>
+    <plot>{$episode['desc']}</plot>
+    <aired>{$publishedDate->format('Y-m-d')}</aired>
+    <writer>{$episode['series']['author']['name']}</writer>
+    <director>{$episode['series']['author']['name']}</director>
+    <mpaa>NR</mpaa>
+    <actor>
+        <name>{$episode['series']['author']['name']}</name>
+        <role>Instructor</role>
+        <thumb>{$episode['series']['author']['image']}</thumb>
+    </actor>
+</episodedetails>
+xml;
+
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml);
+        $dom->save($filepath. '.nfo', LIBXML_NOEMPTYTAG);
+    }
+
+    /**
      * Helper to download the video.
      *
      * @param string $downloadUrl
@@ -245,27 +378,46 @@ class Resolver
     }
 
     /**
-     * @param string $seriesSlug
-     * @param string $number
-     * @param string $episodeName
+     * @param array $episode
      *
      * @return string
      */
-    private function getFilename(
-        string $seriesSlug,
-        string $number,
-        string $episodeName
-    ): string {
-        return BASE_FOLDER
+    private function getFilename(array $episode): string {
+        $series = $episode['series'];
+        $seriesTitleYear = Utils::cleanNameForWindows($series['title']) . ' (' . $series['year'] . ')';
+
+        $filename = BASE_FOLDER
             . DIRECTORY_SEPARATOR
             . SERIES_FOLDER
             . DIRECTORY_SEPARATOR
-            . $seriesSlug
+            . $seriesTitleYear
+            . DIRECTORY_SEPARATOR;
+
+        // separate chapters into season folders
+        $chapterNumber = '01';
+        if ($episode['chapter']['number'] !== null) {
+            $chapterNumber = sprintf('%02d', $episode['chapter']['number']);
+        }
+
+        $chapterFolder = 'Season ' . $chapterNumber;
+
+        $this->system->createFolderIfNotExists(
+            SERIES_FOLDER
             . DIRECTORY_SEPARATOR
-            . $number
-            . '-'
-            . Utils::parseEpisodeName($episodeName)
-            . '.mp4';
+            . $seriesTitleYear
+            . DIRECTORY_SEPARATOR
+            . $chapterFolder
+        );
+
+        $episodeNumber = sprintf('%02d', $episode['number']);
+
+        $filename .= $chapterFolder
+            . DIRECTORY_SEPARATOR
+            . $seriesTitleYear
+            . ' - s' . $chapterNumber . 'e' . $episodeNumber
+            . ' - ' . Utils::cleanNameForWindows($episode['title']);
+
+        return $filename;
     }
 
     /**
