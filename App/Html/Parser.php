@@ -40,8 +40,8 @@ class Parser
         return [
             'slug' => $series['slug'],
             'path' => LARACASTS_BASE_URL . $series['path'],
-            'title' => rtrim($series['title']),
-            'body' => rtrim(strip_tags(str_replace('</p><p>', "\n\n", $series['body']))),
+            'title' => trim($series['title']),
+            'body' => trim(strip_tags(str_replace('</p><p>', "\n\n", $series['body']))),
             'thumbnail' => $series['thumbnail'],
             'episode_count' => $series['episodeCount'],
             'is_complete' => $series['complete'],
@@ -98,13 +98,13 @@ class Parser
                 }
 
                 $episodes[] = [
-                    'title' => rtrim($episode['title']),
+                    'title' => trim($episode['title']),
                     'vimeo_id' => $episode['vimeoId'],
                     'number' => $episode['position'],
-                    'desc' => rtrim(strip_tags(str_replace('</p><p>', "\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
+                    'desc' => trim(strip_tags(str_replace('</p><p>', "\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
                     'published' => $episode['dateSegments']['published'],
                     'series' => [
-                        'title' => rtrim($series['title']),
+                        'title' => trim($series['title']),
                         'desc' => trim(strip_tags(str_replace('</p><p>', "\n", $series['body']))),
                         'thumb' => $series['thumbnail'],
                         'collections' => array_unique([$series['difficultyLevel'], $series['taxonomy']['name']]),
