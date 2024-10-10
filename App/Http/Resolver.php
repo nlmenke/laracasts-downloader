@@ -79,29 +79,6 @@ class Resolver
      */
     public function createSeriesNfoFile(array $series, string $seriesFolder): void
     {
-        // download poster too
-        if (isset($series['thumbnail'])) {
-            $fileInfo = pathinfo($series['thumbnail']);
-
-            if (!file_exists('poster.' . $fileInfo['extension'])) {
-                $poster = @file_get_contents($series['thumbnail']);
-
-                if ($poster === false) {
-                    if (strpos($series['thumbnail'], '//', 8) !== false) {
-                        $series['thumbnail'] = preg_replace('/(?<!:)\/\//', '/', $series['thumbnail']);
-                    }
-
-                    if (preg_match('/\/(gif|jpe?g|png|svg|webp)\//', $series['thumbnail'])) {
-                        $series['thumbnail'] = preg_replace('/\/(gif|jpe?g|png|svg|webp)\//', '/', $series['thumbnail']);
-                    }
-
-                    $poster = file_get_contents($series['thumbnail']);
-                }
-
-                file_put_contents($seriesFolder . DIRECTORY_SEPARATOR . 'poster.' . $fileInfo['extension'], $poster);
-            }
-        }
-
         if (file_exists($seriesFolder . DIRECTORY_SEPARATOR . 'tvshow.nfo')) {
             return;
         }
@@ -186,6 +163,39 @@ xml;
             Utils::write($e->getMessage());
 
             return false;
+        }
+    }
+
+    /**
+     * Downloads the series poster.
+     *
+     * @param $series
+     * @param $seriesFolder
+     *
+     * @return void
+     */
+    public function downloadPoster($series, $seriesFolder): void
+    {
+        if (isset($series['thumbnail'])) {
+            $fileInfo = pathinfo($series['thumbnail']);
+
+            if (!file_exists('poster.' . $fileInfo['extension'])) {
+                $poster = @file_get_contents($series['thumbnail']);
+
+                if ($poster === false) {
+                    if (strpos($series['thumbnail'], '//', 8) !== false) {
+                        $series['thumbnail'] = preg_replace('/(?<!:)\/\//', '/', $series['thumbnail']);
+                    }
+
+                    if (preg_match('/\/(gif|jpe?g|png|svg|webp)\//', $series['thumbnail'])) {
+                        $series['thumbnail'] = preg_replace('/\/(gif|jpe?g|png|svg|webp)\//', '/', $series['thumbnail']);
+                    }
+
+                    $poster = file_get_contents($series['thumbnail']);
+                }
+
+                file_put_contents($seriesFolder . DIRECTORY_SEPARATOR . 'poster.' . $fileInfo['extension'], $poster);
+            }
         }
     }
 

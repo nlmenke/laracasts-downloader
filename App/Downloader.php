@@ -137,14 +137,14 @@ class Downloader
 
             $this->system->createSeriesFolderIfNotExists($seriesFolder);
 
-            $this->client->createSeriesNfoFile(
-                $series,
-                BASE_FOLDER
+            $seriesFolder = BASE_FOLDER
                 . DIRECTORY_SEPARATOR
                 . SERIES_FOLDER
                 . DIRECTORY_SEPARATOR
-                . $seriesFolder
-            );
+                . $seriesFolder;
+
+            $this->client->createSeriesNfoFile($series, $seriesFolder);
+            $this->client->downloadPoster($series, $seriesFolder);
 
             foreach ($series['episodes'] as $episode) {
                 if (!$this->client->downloadEpisode($series['slug'], $episode)) {
