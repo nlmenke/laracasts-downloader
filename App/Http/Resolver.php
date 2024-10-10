@@ -296,7 +296,7 @@ xml;
      */
     private function createEpisodeNfoFile(array $episode, string $filepath): void
     {
-        $publishedDate = date_create_from_format('F j, Y', $episode['published'])->format('Y-m-d');
+        $publishedDate = date_create_from_format('F j, Y', $episode['published']);
 
         $xml = <<<xml
 <episodedetails>
@@ -305,7 +305,7 @@ xml;
     <episode>{$episode['number']}</episode>
     <title>{$episode['title']}</title>
     <plot>{$episode['desc']}</plot>
-    <aired>{$publishedDate}</aired>
+    <aired>{$publishedDate->format('Y-m-d')}</aired>
     <writer>{$episode['series']['author']['name']}</writer>
     <director>{$episode['series']['author']['name']}</director>
     <mpaa>NR</mpaa>
