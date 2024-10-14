@@ -169,12 +169,12 @@ xml;
     /**
      * Downloads the series poster.
      *
-     * @param $series
-     * @param $seriesFolder
+     * @param array $series
+     * @param string $seriesFolder
      *
      * @return void
      */
-    public function downloadPoster($series, $seriesFolder): void
+    public function downloadPoster(array $series, string $seriesFolder): void
     {
         if (isset($series['thumbnail'])) {
             $fileInfo = pathinfo($series['thumbnail']);
