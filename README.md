@@ -42,7 +42,7 @@ OR
 1. Clone this repo to your local machine.
 2. Make a local copy of the `.env` file:
    ```sh
-   $ cp .env.example .env
+   cp .env.example .env
    ```
 3. Update your Laracasts account credentials (`EMAIL`, `PASSWORD`) in your `.env`
 4. Decide whether you want to use **vimeo** or **laracasts** as `DOWNLOAD_SOURCE`
@@ -64,11 +64,11 @@ After both downloads complete, the project will merge the files and move the com
 
 1. Install project dependencies:
    ```sh
-   $ composer install
+   composer install
    ```
 2. To run a download of all content, run the following command:
    ```sh
-   $ php start.php
+   php start.php
    ```
 3. See [download specific series](#download-specific-series) or [download specific episodes](#download-specific-episodes)
    for optional flags
@@ -78,15 +78,15 @@ After both downloads complete, the project will merge the files and move the com
 
 1. Build the image:
    ```sh
-   $ docker compose build
+   docker compose build
    ```
 2. Install project dependencies:
    ```sh
-   $ docker compose run --rm composer
+   docker compose run --rm composer
    ```
 3. Then, run the command of your choice as if we were running it locally, but inside the docker container:
    ```sh
-   $ docker compose run --rm laracastdl php ./start.php [empty for all OR provide flags]
+   docker compose run --rm laracastdl php ./start.php [empty for all OR provide flags]
    ```
 4. See [download specific series](#download-specific-series) or [download specific episodes](#download-specific-episodes)
    for optional flags
@@ -111,13 +111,13 @@ php start.php --cache-only
 
 You can either use the Series slug (preferred):
 ```sh
-$ php start.php -s "series-slug-example"
-$ php start.php --series-name "series-slug-example"
+php start.php -s "series-slug-example"
+php start.php --series-name "series-slug-example"
 ```
 Or the Series name (NOT recommended):
 ```sh
-$ php start.php -s "Series name example"
-$ php start.php --series-name "Series name example"
+php start.php -s "Series name example"
+php start.php --series-name "Series name example"
 ```
 
 
@@ -126,8 +126,8 @@ $ php start.php --series-name "Series name example"
 You can provide episode number(s), separated by comma (`,`):
 
 ```sh
-$ php start.php -s "lesson-slug-example" -e "12,15"
-$ php start.php --series-name "series-slug-example" --series-episodes "12,15"
+php start.php -s "lesson-slug-example" -e "12,15"
+php start.php --series-name "series-slug-example" --series-episodes "12,15"
 ```
 
 This will only download episodes which you mentioned in `-e` or `--series-episodes` flag, it will also ignore already
@@ -136,14 +136,60 @@ downloaded episodes as usual.
 This will download episodes 12 and 15 for "nuxtjs-from-scratch" and episode 5 for "laravel-from-scratch":
 
 ```sh
-$ php start.php -s "nuxtjs-from-scratch" -e "12,15" -s "laravel-from-scratch" -e "5"
+php start.php -s "nuxtjs-from-scratch" -e "12,15" -s "laravel-from-scratch" -e "5"
 ```
 
 This will download episodes 12 and 15 for "nuxtjs-from-scratch" and all episodes for "laravel-from-scratch":
 
 ```sh
-$ php start.php -s "nuxtjs-from-scratch" -e "12,15" -s "laravel-from-scratch"
+php start.php -s "nuxtjs-from-scratch" -e "12,15" -s "laravel-from-scratch"
 ```
+
+
+## Download for Plex
+
+If you are a Plex user and would like to download each series
+[organized in a way your Plex Media Server expects](https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/),
+you will need a few things:
+
+1. Install [XBMCnfoTVImporter](https://github.com/gboudreau/XBMCnfoTVImporter.bundle) on your Plex Media Server
+   - details to enable the plugin are outlined in the linked repo
+2. Switch to the `plex-nfo` branch
+3. Run the script as outlined [above](#installation)
+
+> It is recommended to use a separate library in Plex with a Library Type of `TV Shows` and the Agent set to
+  `XBMCInfoTVImporter`. 
+
+
+### Automate in Unraid
+
+If you use Unraid, you can automate downloading new episodes as well (I will assume the User Scripts plugin is
+installed):
+
+1. Create a new User Script
+2. Edit the script and add the following (add paths required for your setup):
+   ```sh
+   #!/bin/bash
+   cd /PATH/TO/THIS/REPO
+
+   # build the laracastdl docker image and download new episodes
+   echo "Downloading new Laracasts episodes"
+   docker build -t laracastdl - < docker/laracastdl/dockerfile
+   docker run --rm -i -v ${PWD}:/usr/src/laracastdl -w /usr/src/laracastdl --name laracastdl laracastdl php ./start.php
+
+   # sync files to Plex library directory
+   echo "Syncing files"
+   rsync -a --ignore-existing ${PWD}/downloads/series/ /PATH/TO/YOUR/LARACASTS/LIBRARY/
+
+   # push a notification to the Unraid GUI
+   if [[ $? -eq 0 ]]; then
+    /usr/local/emhttp/webGui/scripts/notify -i normal -s "Laracasts Downloader" -d "New Laracasts episodes downloaded successfully."
+   else
+    /usr/local/emhttp/webGui/scripts/notify -i warning -s "Laracasts Downloader" -d "Laracasts Downloader failed."
+   fi
+   ```
+3. Run as desired
+   > You will need to do a `composer install` to install the required packages before running this script for the first time.
 
 
 ## Troubleshooting
