@@ -4,6 +4,8 @@
  * Main cycle of the app.
  */
 
+declare(strict_types=1);
+
 namespace App;
 
 use App\Exceptions\LoginException;
@@ -13,6 +15,7 @@ use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use Cocur\Slugify\Slugify;
 use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Exception\GuzzleException;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemException;
 use Ubench;
@@ -82,6 +85,7 @@ class Downloader
      * @param string $email
      * @param string $password
      *
+     * @throws GuzzleException
      * @throws LoginException
      *
      * @return bool
@@ -121,6 +125,7 @@ class Downloader
      * @param int   $newEpisodesCount
      *
      * @throws FilesystemException
+     * @throws GuzzleException
      *
      * @return void
      */
@@ -171,6 +176,7 @@ class Downloader
      * @param array $options
      *
      * @throws FilesystemException
+     * @throws GuzzleException
      * @throws LoginException
      *
      * @return void

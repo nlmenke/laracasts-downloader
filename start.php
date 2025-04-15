@@ -4,7 +4,11 @@
  * App start point.
  */
 
+declare(strict_types=1);
+
+use GuzzleHttp\Exception\GuzzleException;
 use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemException;
 use League\Flysystem\Local\LocalFilesystemAdapter as Adapter;
 
 require_once 'bootstrap.php';
@@ -21,4 +25,5 @@ try {
     $app->start($options);
 } catch (Exception $e) {
     echo 'ERROR: ' . $e->getMessage();
+} catch (FilesystemException|GuzzleException $e) {
 }

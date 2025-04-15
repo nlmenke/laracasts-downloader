@@ -4,6 +4,8 @@
  * Http Functions.
  */
 
+declare(strict_types=1);
+
 namespace App\Http;
 
 use App\Html\Parser;
@@ -158,7 +160,7 @@ xml;
     /**
      * Downloads the series poster.
      *
-     * @param array $series
+     * @param array  $series
      * @param string $seriesFolder
      *
      * @return void
@@ -168,7 +170,7 @@ xml;
         if (isset($series['thumbnail'])) {
             $fileInfo = pathinfo($series['thumbnail']);
 
-            if (!file_exists('poster.' . $fileInfo['extension'])) {
+            if (! file_exists('poster.' . $fileInfo['extension'])) {
                 $poster = @file_get_contents($series['thumbnail']);
 
                 if ($poster === false) {
@@ -322,11 +324,11 @@ xml;
 </episodedetails>
 xml;
 
-        $dom = new DOMDocument();
+        $dom = new DOMDocument;
         $dom->preserveWhiteSpace = false;
         $dom->formatOutput = true;
         $dom->loadXML($xml);
-        $dom->save($filepath. '.nfo', LIBXML_NOEMPTYTAG);
+        $dom->save($filepath . '.nfo', LIBXML_NOEMPTYTAG);
     }
 
     /**
@@ -377,7 +379,8 @@ xml;
      *
      * @return string
      */
-    private function getFilename(array $episode): string {
+    private function getFilename(array $episode): string
+    {
         $series = $episode['series'];
         $seriesTitleYear = Utils::cleanNameForWindows($series['title']) . ' (' . $series['year'] . ')';
 
@@ -390,7 +393,7 @@ xml;
 
         // separate chapters into season folders
         $chapterNumber = '01';
-        if ($episode['chapter']['number'] !== null) {
+        if (isset($episode['chapter']['number'])) {
             $chapterNumber = sprintf('%02d', $episode['chapter']['number']);
         }
 
@@ -427,7 +430,7 @@ xml;
      */
     private function getLaracastsLink(string $seriesSlug, int $episodeNumber): string
     {
-        $episodeHtml = $this->getHtml("series/$seriesSlug/episodes/$episodeNumber");
+        $episodeHtml = $this->getHtml(LARACASTS_SERIES_PATH . '/' . $seriesSlug . '/episodes/' . $episodeNumber);
 
         return Parser::getEpisodeDownloadLink($episodeHtml);
     }

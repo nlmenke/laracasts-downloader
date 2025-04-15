@@ -4,6 +4,8 @@
  * Vimeo Master DTO.
  */
 
+declare(strict_types=1);
+
 namespace App\Vimeo\DTO;
 
 use GuzzleHttp\Psr7\UriResolver;

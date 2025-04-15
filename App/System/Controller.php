@@ -4,6 +4,8 @@
  * System Controller.
  */
 
+declare(strict_types=1);
+
 namespace App\System;
 
 use League\Flysystem\Filesystem;
@@ -13,14 +15,14 @@ use League\Flysystem\StorageAttributes;
 /**
  * Class Controller.
  */
-class Controller
+readonly class Controller
 {
     /**
      * @param Filesystem $system
      *
      * @return void
      */
-    public function __construct(private readonly Filesystem $system) {}
+    public function __construct(private Filesystem $system) {}
 
     /**
      * Create folder if not exists.
@@ -95,7 +97,7 @@ class Controller
 
             [$series, $episode] = $segments;
 
-            $episodeNumber = (int)substr($episode, 0, strpos($episode, '-'));
+            $episodeNumber = (int)substr($episode, 0, (strpos($episode, '-') ?: 0));
 
             $array[$series][] = $episodeNumber;
         }

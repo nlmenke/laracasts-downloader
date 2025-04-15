@@ -4,6 +4,8 @@
  * Dom Parser.
  */
 
+declare(strict_types=1);
+
 namespace App\Html;
 
 use Symfony\Component\DomCrawler\Crawler;
@@ -92,13 +94,13 @@ class Parser
                 }
 
                 // vimeoId is null for upcoming episodes
-                if (! $episode['vimeoId']) {
+                if (! isset($episode['vimeoId'])) {
                     continue;
                 }
 
                 $episodes[] = [
                     'title' => trim($episode['title']),
-                    'vimeo_id' => $episode['vimeoId'],
+                    'vimeo_id' => (int)$episode['vimeoId'],
                     'number' => $episode['position'],
                     'desc' => trim(strip_tags(str_replace('</p><p>', "\n", $episode['body'] ?? $episode['summary'] ?? $episode['excerpt']))),
                     'published' => $episode['dateSegments']['published'],

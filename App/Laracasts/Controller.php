@@ -4,27 +4,32 @@
  * Laracasts Controller.
  */
 
+declare(strict_types=1);
+
 namespace App\Laracasts;
 
 use App\Html\Parser;
 use App\Http\Resolver;
 use App\Utils\SeriesCollection;
 use App\Utils\Utils;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Class Controller.
  */
-class Controller
+readonly class Controller
 {
     /**
      * @param Resolver $client
      *
      * @return void
      */
-    public function __construct(private readonly Resolver $client) {}
+    public function __construct(private Resolver $client) {}
 
     /**
      * @param array $filters
+     *
+     * @throws GuzzleException
      *
      * @return array
      */
@@ -33,7 +38,7 @@ class Controller
         $seriesCollection = new SeriesCollection([]);
 
         foreach ($filters as $seriesSlug => $filteredEpisodes) {
-            $seriesHtml = $this->client->getHtml("series/$seriesSlug");
+            $seriesHtml = $this->client->getHtml(LARACASTS_SERIES_PATH . '/' . $seriesSlug);
 
             $series = Parser::getSeriesData($seriesHtml);
 
@@ -52,6 +57,8 @@ class Controller
      *
      * @param array $cachedData
      * @param bool  $cacheOnly
+     *
+     * @throws GuzzleException
      *
      * @return array
      */
@@ -103,7 +110,7 @@ class Controller
         foreach ($bits as $bit) {
             Utils::writeln("Getting series: $bit...");
 
-            $seriesHtml = $this->client->getHtml(LARACASTS_BASE_URL . '/series/' . $bit);
+            $seriesHtml = $this->client->getHtml(LARACASTS_BASE_URL . '/' . LARACASTS_SERIES_PATH . '/' . $bit);
 
             $series = Parser::getSeriesData($seriesHtml);
 
@@ -126,7 +133,7 @@ class Controller
      * @param array            $topic
      *
      * @return bool
-     * */
+     */
     public function isTopicUpdated(SeriesCollection $series, array $topic): bool
     {
         $series = $series->where('topic', $topic['slug']);

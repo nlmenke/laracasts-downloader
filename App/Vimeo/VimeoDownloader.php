@@ -4,10 +4,13 @@
  * Vimeo Downloader.
  */
 
+declare(strict_types=1);
+
 namespace App\Vimeo;
 
 use App\Utils\Utils;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Class VimeoDownloader.
@@ -37,6 +40,8 @@ class VimeoDownloader
     /**
      * @param int    $vimeoId
      * @param string $filepath
+     *
+     * @throws GuzzleException
      *
      * @return bool
      */
@@ -75,6 +80,8 @@ class VimeoDownloader
      * @param string $filepath
      * @param array  $sizes
      *
+     * @throws GuzzleException
+     *
      * @return void
      */
     private function downloadSegments(
@@ -103,6 +110,8 @@ class VimeoDownloader
      * @param string $baseUrl
      * @param array  $sourceData
      * @param string $filepath
+     *
+     * @throws GuzzleException
      *
      * @return void
      */

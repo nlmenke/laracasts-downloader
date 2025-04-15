@@ -1,5 +1,8 @@
 {
   "preset": "laravel",
+  "exclude": [
+    "downloads"
+  ],
   "rules": {
     "cast_spaces": {
       "space": "none"
@@ -10,6 +13,7 @@
     "concat_space": {
       "spacing": "one"
     },
+    "declare_strict_types": true,
     "no_superfluous_phpdoc_tags": false,
     "php_unit_method_casing": {
       "case": "camel_case"

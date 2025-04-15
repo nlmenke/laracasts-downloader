@@ -4,6 +4,8 @@
  * Utilities.
  */
 
+declare(strict_types=1);
+
 namespace App\Utils;
 
 /**
@@ -29,9 +31,9 @@ class Utils
      *
      * @param string $name
      *
-     * @return array<string>|string|null
+     * @return string|null
      */
-    public static function cleanNameForWindows(string $name)
+    public static function cleanNameForWindows(string $name): ?string
     {
         return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
     }

@@ -4,6 +4,8 @@
  * ConvertCacheToJson command.
  */
 
+declare(strict_types=1);
+
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter as Adapter;
 
