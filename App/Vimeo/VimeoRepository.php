@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Vimeo Repository.
  */
@@ -8,31 +9,24 @@ namespace App\Vimeo;
 use App\Vimeo\DTO\MasterDTO;
 use App\Vimeo\DTO\VideoDTO;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Class VimeoRepository.
- *
- * @package App\Vimeo
  */
 class VimeoRepository
 {
-    /**
-     * @var Client
-     */
-    private $client;
-
     /**
      * @param Client $client
      *
      * @return void
      */
-    public function __construct(Client $client)
-    {
-        $this->client = $client;
-    }
+    public function __construct(private readonly Client $client) {}
 
     /**
      * @param int $vimeoId
+     *
+     * @throws GuzzleException
      *
      * @return VideoDTO
      */
@@ -51,13 +45,15 @@ class VimeoRepository
 
         preg_match('/"(?:google_skyfire|akfire_interconnect_quic)":({.+?})/', $content, $cdns);
 
-        return (new VideoDTO())
+        return (new VideoDTO)
             ->setMasterUrl(json_decode($cdns[1], true)['url'])
             ->setStreams(json_decode($streams[1], true));
     }
 
     /**
      * @param VideoDTO $video
+     *
+     * @throws GuzzleException
      *
      * @return MasterDTO
      */
@@ -69,7 +65,7 @@ class VimeoRepository
 
         $data = json_decode($content, true);
 
-        return (new MasterDTO())
+        return (new MasterDTO)
             ->setMasterUrl($video->getMasterUrl())
             ->setBaseUrl($data['base_url'])
             ->setClipId($data['clip_id'])

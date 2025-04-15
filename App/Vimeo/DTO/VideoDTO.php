@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Vimeo Video DTO.
  */
@@ -7,33 +8,31 @@ namespace App\Vimeo\DTO;
 
 /**
  * Class VideoDTO.
- *
- * @package App\Vimeo\DTO
  */
 class VideoDTO
 {
     /**
-     * @var string
+     * @var string|null
      */
-    private $masterUrl;
+    private ?string $masterUrl = null;
 
     /**
-     * @var array
+     * @var array|null
      */
-    private $streams;
+    private ?array $streams = null;
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getMasterUrl(): string
+    public function getMasterUrl(): ?string
     {
         return $this->masterUrl;
     }
 
     /**
-     * @return array
+     * @return array|null
      */
-    public function getStreams(): array
+    public function getStreams(): ?array
     {
         return $this->streams;
     }
@@ -43,21 +42,19 @@ class VideoDTO
      */
     public function getVideoIdByQuality(): ?string
     {
-        $id = null;
-
         foreach ($this->getStreams() as $stream) {
-            if ($stream['quality'] === getenv('VIDEO_QUALITY')) {
-                $id = explode('-', $stream['id'])[0];
+            if ($stream['quality'] === $_ENV['VIDEO_QUALITY']) {
+                return $stream['id'];
             }
         }
 
-        return $id;
+        return null;
     }
 
     /**
      * @param string $masterUrl
      *
-     * @return self
+     * @return $this
      */
     public function setMasterUrl(string $masterUrl): VideoDTO
     {
@@ -69,7 +66,7 @@ class VideoDTO
     /**
      * @param array $streams
      *
-     * @return self
+     * @return $this
      */
     public function setStreams(array $streams): VideoDTO
     {

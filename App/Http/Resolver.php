@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Http Functions.
  */
@@ -13,44 +14,29 @@ use DOMDocument;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Query;
-use League\Flysystem\Adapter\Local as LocalAdapter;
 use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemException;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 use Ubench;
 
 /**
  * Class Resolver.
- *
- * @package App\Http
  */
 class Resolver
 {
-    /**
-     * Ubench lib.
-     *
-     * @var Ubench
-     */
-    private $bench;
-
-    /**
-     * Guzzle client.
-     *
-     * @var Client
-     */
-    private $client;
-
     /**
      * Guzzle cookie.
      *
      * @var CookieJar
      */
-    private $cookies;
+    private readonly CookieJar $cookies;
 
     /**
      * @var SystemController
      */
-    private $system;
+    private SystemController $system;
 
     /**
      * @param Client $client
@@ -58,13 +44,13 @@ class Resolver
      *
      * @return void
      */
-    public function __construct(Client $client, Ubench $bench)
-    {
-        $this->client = $client;
-        $this->cookies = new CookieJar();
-        $this->bench = $bench;
+    public function __construct(
+        private readonly Client $client,
+        private readonly Ubench $bench
+    ) {
+        $this->cookies = new CookieJar;
 
-        $this->system = new SystemController(new Filesystem(new LocalAdapter(BASE_FOLDER)));
+        $this->system = new SystemController(new Filesystem(new LocalFilesystemAdapter(BASE_FOLDER)));
     }
 
     /**
@@ -111,7 +97,7 @@ class Resolver
 </tvshow>
 xml;
 
-        $dom = new DOMDocument();
+        $dom = new DOMDocument;
         $dom->preserveWhiteSpace = false;
         $dom->formatOutput = true;
         $dom->loadXML($xml);
@@ -123,6 +109,9 @@ xml;
      *
      * @param string $seriesSlug
      * @param array  $episode
+     *
+     * @throws FilesystemException
+     * @throws GuzzleException
      *
      * @return bool
      */
@@ -144,14 +133,14 @@ xml;
                 )
             );
 
-            $source = getenv('DOWNLOAD_SOURCE');
+            $source = $_ENV['DOWNLOAD_SOURCE'];
 
-            if (!$source or $source === 'laracasts') {
+            if (! $source or $source === 'laracasts') {
                 $downloadLink = $this->getLaracastsLink($seriesSlug, $episode['number']);
 
                 $isDownloaded = $this->downloadVideo($downloadLink, $filepath . '.mp4');
             } else {
-                $vimeoDownloader = new VimeoDownloader();
+                $vimeoDownloader = new VimeoDownloader;
 
                 $isDownloaded = $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
             }
@@ -202,6 +191,8 @@ xml;
     /**
      * Returns CSRF token.
      *
+     * @throws GuzzleException
+     *
      * @return string
      */
     public function getCsrfToken(): string
@@ -218,18 +209,18 @@ xml;
             ]);
 
         $token = current(
-            array_filter($this->cookies->toArray(), function ($cookie) {
-                return $cookie['Name'] === 'XSRF-TOKEN';
-            })
+            array_filter($this->cookies->toArray(), fn ($cookie): bool => $cookie['Name'] === 'XSRF-TOKEN')
         );
 
-        return urldecode($token['Value']);
+        return urldecode((string)$token['Value']);
     }
 
     /**
      * Returns the HTML content of a URL.
      *
      * @param string $url
+     *
+     * @throws GuzzleException
      *
      * @return string
      */
@@ -246,6 +237,8 @@ xml;
 
     /**
      * Returns the HTML of the topics page.
+     *
+     * @throws GuzzleException
      *
      * @return string
      */
@@ -266,6 +259,8 @@ xml;
      * @param string $email
      * @param string $password
      *
+     * @throws GuzzleException
+     *
      * @return array
      */
     public function login(string $email, string $password): array
@@ -276,7 +271,7 @@ xml;
             ->post(LARACASTS_POST_LOGIN_PATH, [
                 'cookies' => $this->cookies,
                 'headers' => [
-                    "X-XSRF-TOKEN" => $token,
+                    'X-XSRF-TOKEN' => $token,
                     'Content-Type' => 'application/json',
                     'X-Requested-With' => 'XMLHttpRequest',
                     'Referer' => LARACASTS_BASE_URL,
@@ -340,6 +335,8 @@ xml;
      * @param string $downloadUrl
      * @param string $saveTo
      *
+     * @throws GuzzleException
+     *
      * @return bool
      */
     private function downloadVideo(string $downloadUrl, string $saveTo): bool
@@ -349,15 +346,11 @@ xml;
         $link = $this->prepareDownloadLink($downloadUrl);
 
         try {
-            $downloadedBytes = file_exists($saveTo) ? filesize($saveTo) : 0;
-            $req = $this->client->createRequest('GET', $link['url'], [
-                'query' => Query::fromString($link['query'], false),
-                'save_to' => fopen($saveTo, 'a'),
+            $this->client->request('GET', $link['url'], [
+                'query' => $link['query'],
+                'sink' => fopen($saveTo, 'a'),
+                'progress' => fn ($downloadTotal, $downloadedBytes) => Utils::showProgressBar($downloadedBytes, $downloadTotal),
             ]);
-
-            Utils::showProgressBar($req, $downloadedBytes);
-
-            $this->client->send($req);
         } catch (Exception $e) {
             echo $e->getMessage() . PHP_EOL;
 
@@ -379,6 +372,8 @@ xml;
 
     /**
      * @param array $episode
+     *
+     * @throws FilesystemException
      *
      * @return string
      */
@@ -426,6 +421,8 @@ xml;
      * @param string $seriesSlug
      * @param int    $episodeNumber
      *
+     * @throws GuzzleException
+     *
      * @return string
      */
     private function getLaracastsLink(string $seriesSlug, int $episodeNumber): string
@@ -440,6 +437,8 @@ xml;
      *
      * @param string $url
      *
+     * @throws GuzzleException
+     *
      * @return string
      */
     private function getRedirectUrl(string $url): string
@@ -450,18 +449,19 @@ xml;
             'verify' => false,
         ]);
 
-        return $response->getHeader('Location');
+        return $response->getHeader('Location')[0] ?? '';
     }
 
     /**
      * @param string $url
      *
+     * @throws GuzzleException
+     *
      * @return array
      */
     private function prepareDownloadLink(string $url): array
     {
-        $url = $this->getRedirectUrl($url);
-        $parts = parse_url($url);
+        $parts = parse_url($this->getRedirectUrl($url));
 
         return [
             'query' => $parts['query'],

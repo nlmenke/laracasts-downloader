@@ -3,8 +3,8 @@
 config.ini
 config.ini~
 .gitignore~
-vendor
-downloads
+downloads/
+vendor/
 cacert.pem
 
 .env

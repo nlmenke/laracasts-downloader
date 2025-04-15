@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Dom Parser.
  */
@@ -9,8 +10,6 @@ use Symfony\Component\DomCrawler\Crawler;
 
 /**
  * Class Parser.
- *
- * @package App\Html
  */
 class Parser
 {
@@ -45,7 +44,7 @@ class Parser
             'thumbnail' => $series['thumbnail'],
             'episode_count' => $series['episodeCount'],
             'is_complete' => $series['complete'],
-            'difficulty_level' => $series['difficulty_level'],
+            'difficulty_level' => $series['difficulty_level'] ?? null,
             'taxonomy' => $series['taxonomy']['name'],
             'author' => [
                 'name' => $series['author']['profile']['full_name'],
@@ -88,12 +87,12 @@ class Parser
         foreach ($chapters as $chapter) {
             foreach ($chapter['episodes'] as $episode) {
                 // TODO: It's not the parser responsibility to filter episodes
-                if (!empty($filteredEpisodes) && !in_array($episode['position'], $filteredEpisodes)) {
+                if (! empty($filteredEpisodes) && ! in_array($episode['position'], $filteredEpisodes)) {
                     continue;
                 }
 
                 // vimeoId is null for upcoming episodes
-                if (!$episode['vimeoId']) {
+                if (! $episode['vimeoId']) {
                     continue;
                 }
 
@@ -114,7 +113,7 @@ class Parser
                         ],
                         'year' => $seriesYear,
                     ],
-                    'chapters' => [
+                    'chapter' => [
                         'number' => $chapter['number'],
                         'heading' => $chapter['heading'],
                     ],
@@ -152,9 +151,7 @@ class Parser
 
         return array_combine(
             array_column($series, 'slug'),
-            array_map(function ($series) {
-                return self::extractSeriesData($series);
-            }, $series)
+            array_map(fn ($series) => self::extractSeriesData($series), $series)
         );
     }
 
@@ -169,15 +166,13 @@ class Parser
     {
         $data = self::getData($html);
 
-        return array_map(function ($topic) {
-            return [
-                'slug' => str_replace(LARACASTS_BASE_URL . '/topics/', '', $topic['path']),
-                'path' => $topic['path'],
-                'name' => $topic['name'],
-                'episode_count' => $topic['episode_count'],
-                'series_count' => $topic['series_count'],
-            ];
-        }, $data['props']['topics']);
+        return array_map(fn ($topic): array => [
+            'slug' => str_replace(LARACASTS_BASE_URL . '/topics/', '', $topic['path']),
+            'path' => $topic['path'],
+            'name' => $topic['name'],
+            'episode_count' => $topic['episode_count'],
+            'series_count' => $topic['series_count'],
+        ], $data['props']['topics']);
     }
 
     /**
@@ -211,6 +206,6 @@ class Parser
 
         $data = $parser->filter('#app')->attr('data-page');
 
-        return json_decode($data, true);
+        return json_decode((string)$data, true);
     }
 }

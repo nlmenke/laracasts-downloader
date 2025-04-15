@@ -1,0 +1,57 @@
+{
+  "preset": "laravel",
+  "rules": {
+    "cast_spaces": {
+      "space": "none"
+    },
+    "class_definition": {
+      "single_line": false
+    },
+    "concat_space": {
+      "spacing": "one"
+    },
+    "no_superfluous_phpdoc_tags": false,
+    "php_unit_method_casing": {
+      "case": "camel_case"
+    },
+    "phpdoc_add_missing_param_annotation": {
+      "only_untyped": false
+    },
+    "phpdoc_align": true,
+    "phpdoc_no_empty_return": false,
+    "phpdoc_order": {
+      "order": [
+        "deprecated",
+        "todo",
+        "see",
+        "example",
+        "package",
+        "subpackage",
+        "author",
+        "version",
+        "since",
+        "api",
+        "internal",
+        "var",
+        "param",
+        "throws",
+        "return"
+      ]
+    },
+    "phpdoc_return_self_reference": true,
+    "phpdoc_separation": {
+      "groups": [
+        [
+          "package",
+          "subpackage"
+        ]
+      ]
+    },
+    "phpdoc_types_order": {
+      "case_sensitive": true,
+      "null_adjustment": "always_last"
+    },
+    "phpdoc_var_annotation_correct_order": true,
+    "single_trait_insert_per_statement": true
+  }
+}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Main cycle of the app.
  */
@@ -12,15 +13,12 @@ use App\System\Controller as SystemController;
 use App\Utils\Utils;
 use Cocur\Slugify\Slugify;
 use GuzzleHttp\Client as HttpClient;
-use League\Flysystem\FileExistsException;
-use League\Flysystem\FileNotFoundException;
 use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemException;
 use Ubench;
 
 /**
  * Class Downloader.
- *
- * @package App
  */
 class Downloader
 {
@@ -29,38 +27,38 @@ class Downloader
      *
      * @var Ubench
      */
-    private $bench;
+    private readonly Ubench $bench;
 
     /**
      * Don't scrape pages and only get from existing cache.
      *
      * @var bool
      */
-    private $cacheOnly = false;
+    private bool $cacheOnly = false;
 
     /**
      * Http resolver object.
      *
      * @var Resolver
      */
-    private $client;
+    private readonly Resolver $client;
 
     /**
-     * @var array
+     * @var array<string, array<int>>
      */
-    private $filters = [];
+    private array $filters = [];
 
     /**
      * @var LaracastsController
      */
-    private $laracasts;
+    private readonly LaracastsController $laracasts;
 
     /**
      * System object.
      *
      * @var SystemController
      */
-    private $system;
+    private readonly SystemController $system;
 
     /**
      * @param HttpClient $httpClient
@@ -98,7 +96,7 @@ class Downloader
 
         $user = $this->client->login($email, $password);
 
-        if (!is_null($user['error'])) {
+        if (! is_null($user['error'])) {
             throw new LoginException($user['error']);
         }
 
@@ -106,9 +104,11 @@ class Downloader
             Utils::write('Logged in as ' . $user['data']['email']);
         }
 
-        if (!$user['data']['subscribed']) {
-            throw new LoginException("You don't have active subscription!");
-        }
+        // Let's allow user with no subscription to download free lessons
+        // https://github.com/carlosflorencio/laracasts-downloader/issues/131
+        // if (! $user['data']['subscribed']) {
+        //     throw new LoginException("You don't have active subscription!");
+        // }
 
         return $user['signedIn'];
     }
@@ -119,6 +119,8 @@ class Downloader
      * @param array $newEpisodes
      * @param array $counter
      * @param int   $newEpisodesCount
+     *
+     * @throws FilesystemException
      *
      * @return void
      */
@@ -147,8 +149,8 @@ class Downloader
             $this->client->downloadPoster($series, $seriesFolder);
 
             foreach ($series['episodes'] as $episode) {
-                if (!$this->client->downloadEpisode($series['slug'], $episode)) {
-                    $counter['failed_episode'] = $counter['failed_episode'] + 1;
+                if (! $this->client->downloadEpisode($series['slug'], $episode)) {
+                    $counter['failed_episode'] += 1;
                 }
 
                 Utils::write(
@@ -168,9 +170,8 @@ class Downloader
      *
      * @param array $options
      *
+     * @throws FilesystemException
      * @throws LoginException
-     * @throws FileExistsException
-     * @throws FileNotFoundException
      *
      * @return void
      */
@@ -293,12 +294,12 @@ class Downloader
 
             Utils::write(sprintf('Episode numbers provided: %s', json_encode($episodes)));
 
-            if (!is_array($episodes)) {
+            if (! is_array($episodes)) {
                 $episodes = [$episodes];
             }
 
             foreach ($episodes as $episode) {
-                $positions = explode(',', $episode);
+                $positions = explode(',', (string)$episode);
 
                 sort($positions, SORT_NUMERIC);
 
@@ -317,16 +318,14 @@ class Downloader
         if (isset($options['s']) || isset($options['series-name'])) {
             $seriesName = $options['s'] ?? $options['series-name'];
 
-            if (!is_array($seriesName)) {
+            if (! is_array($seriesName)) {
                 $seriesName = [$seriesName];
             }
 
-            $slugify = new Slugify();
+            $slugify = new Slugify;
             $slugify->addRule("'", '');
 
-            $this->filters['series'] = array_map(function ($series) use ($slugify) {
-                return $slugify->slugify($series);
-            }, $seriesName);
+            $this->filters['series'] = array_map(fn ($series): string => $slugify->slugify($series), $seriesName);
 
             Utils::write(sprintf('Series names provided: %s', json_encode($this->filters['series'])));
         }

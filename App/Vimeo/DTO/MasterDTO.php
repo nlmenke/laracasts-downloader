@@ -1,44 +1,44 @@
 <?php
+
 /**
  * Vimeo Master DTO.
  */
 
 namespace App\Vimeo\DTO;
 
-use GuzzleHttp\Psr7;
+use GuzzleHttp\Psr7\UriResolver;
+use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\UriInterface;
 
 /**
  * Class MasterDTO.
- *
- * @package App\Vimeo\DTO
  */
 class MasterDTO
 {
     /**
-     * @var array
+     * @var array|null
      */
-    private $audios;
+    private ?array $audios = null;
 
     /**
-     * @var string
+     * @var string|null
      */
-    private $baseUrl;
+    private ?string $baseUrl = null;
 
     /**
-     * @var string
+     * @var string|null
      */
-    private $clipId;
+    private ?string $clipId = null;
 
     /**
-     * @var string
+     * @var string|null
      */
-    private $masterUrl;
+    private ?string $masterUrl = null;
 
     /**
-     * @var array
+     * @var array|null
      */
-    private $videos;
+    private ?array $videos = null;
 
     /**
      * @return array
@@ -47,9 +47,7 @@ class MasterDTO
     {
         $audios = $this->getAudios();
 
-        usort($audios, function ($a, $b) {
-            return $a['bitrate'] <=> $b['bitrate'];
-        });
+        usort($audios, fn ($a, $b): int => $a['bitrate'] <=> $b['bitrate']);
 
         return end($audios);
     }
@@ -59,7 +57,7 @@ class MasterDTO
      */
     public function getAudios(): array
     {
-        return array_map(function ($audio) {
+        return array_map(function (array $audio) {
             $audio['extension'] = '.m4a';
 
             return $audio;
@@ -67,17 +65,17 @@ class MasterDTO
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getBaseUrl(): string
+    public function getBaseUrl(): ?string
     {
         return $this->baseUrl;
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getClipId(): string
+    public function getClipId(): ?string
     {
         return $this->clipId;
     }
@@ -87,7 +85,7 @@ class MasterDTO
      */
     public function getMasterUrl(): UriInterface
     {
-        return Psr7\Utils::uriFor($this->masterUrl);
+        return Utils::uriFor($this->masterUrl);
     }
 
     /**
@@ -101,18 +99,24 @@ class MasterDTO
     {
         $videos = $this->getVideos();
 
-        if (!is_null($id)) {
+        if (! is_null($id)) {
             $ids = array_column($videos, 'id');
             $key = array_search($id, $ids);
 
             if ($key !== false) {
                 return $videos[$key];
             }
+
+            // Previously, the Vimeo ID matched the first segment of the UUID.
+            // so we keep it for backward compatibility
+            $key = array_search(explode('-', $id)[0], $ids);
+
+            if ($key !== false) {
+                return $videos[$key];
+            }
         }
 
-        usort($videos, function ($a, $b) {
-            return $a['height'] <=> $b['height'];
-        });
+        usort($videos, fn ($a, $b): int => $a['height'] <=> $b['height']);
 
         return end($videos);
     }
@@ -122,7 +126,7 @@ class MasterDTO
      */
     public function getVideos(): array
     {
-        return array_map(function ($video) {
+        return array_map(function (array $video) {
             $video['extension'] = '.m4v';
 
             return $video;
@@ -132,22 +136,22 @@ class MasterDTO
     /**
      * Make final URL from combination of absolute and relate ones.
      *
-     * @param UriInterface|string $url
+     * @param string $url
      *
      * @return string
      */
-    public function resolveUrl($url): string
+    public function resolveUrl(string $url): string
     {
-        return (string)Psr7\UriResolver::resolve(
+        return (string)UriResolver::resolve(
             $this->getMasterUrl(),
-            Psr7\Utils::uriFor($this->getBaseUrl() . $url)
+            Utils::uriFor($this->getBaseUrl() . $url)
         );
     }
 
     /**
      * @param array $audios
      *
-     * @return self
+     * @return $this
      */
     public function setAudios(array $audios): MasterDTO
     {
@@ -159,7 +163,7 @@ class MasterDTO
     /**
      * @param string $baseUrl
      *
-     * @return self
+     * @return $this
      */
     public function setBaseUrl(string $baseUrl): MasterDTO
     {
@@ -171,7 +175,7 @@ class MasterDTO
     /**
      * @param string $clipId
      *
-     * @return self
+     * @return $this
      */
     public function setClipId(string $clipId): MasterDTO
     {
@@ -195,7 +199,7 @@ class MasterDTO
     /**
      * @param array $videos
      *
-     * @return self
+     * @return $this
      */
     public function setVideos(array $videos): MasterDTO
     {

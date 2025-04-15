@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Series Collection.
  */
@@ -7,32 +8,22 @@ namespace App\Utils;
 
 /**
  * class SeriesCollection.
- *
- * @package App\Utils
  */
 class SeriesCollection
 {
     /**
-     * @var array
+     * @param array $series
+     *
+     * @return void
      */
-    private $series;
+    public function __construct(private array $series) {}
 
     /**
      * @param array $series
      *
      * @return void
      */
-    public function __construct(array $series)
-    {
-        $this->series = $series;
-    }
-
-    /**
-     * @param array $series
-     *
-     * @return void
-     */
-    public function add(array $series)
+    public function add(array $series): void
     {
         $this->series[$series['slug']] = $series;
     }
@@ -50,13 +41,13 @@ class SeriesCollection
      */
     public function exists(): bool
     {
-        return !empty($this->series);
+        return ! empty($this->series);
     }
 
     /**
      * @return mixed|null
      */
-    public function first()
+    public function first(): mixed
     {
         return $this->exists() ? $this->series[0] : null;
     }

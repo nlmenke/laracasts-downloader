@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Laracasts Controller.
  */
@@ -12,25 +13,15 @@ use App\Utils\Utils;
 
 /**
  * Class Controller.
- *
- * @package App\Laracasts
  */
 class Controller
 {
-    /**
-     * @var Resolver
-     */
-    private $client;
-
     /**
      * @param Resolver $client
      *
      * @return void
      */
-    public function __construct(Resolver $client)
-    {
-        $this->client = $client;
-    }
+    public function __construct(private readonly Resolver $client) {}
 
     /**
      * @param array $filters
@@ -157,7 +148,7 @@ class Controller
     {
         $target = $seriesList->where('slug', $series['slug'])->first();
 
-        return !is_null($target)
+        return ! is_null($target)
             && (count($target['episodes']) == $series['episode_count']);
     }
 }

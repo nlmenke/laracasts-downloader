@@ -1,17 +1,13 @@
 <?php
+
 /**
  * Utilities.
  */
 
 namespace App\Utils;
 
-use GuzzleHttp\Event\ProgressEvent;
-use GuzzleHttp\Message\RequestInterface;
-
 /**
  * Class Utils.
- *
- * @package App\Utils
  */
 class Utils
 {
@@ -20,7 +16,7 @@ class Utils
      *
      * @param string $text
      */
-    public static function box(string $text)
+    public static function box(string $text): void
     {
         echo self::newLine();
         echo '====================================' . self::newLine();
@@ -62,7 +58,7 @@ class Utils
                 $series['episodes'] = [];
 
                 foreach ($episodes as $episode) {
-                    if (!in_array($episode['number'], $localListArray[$seriesSlug])) {
+                    if (! in_array($episode['number'], $localListArray[$seriesSlug])) {
                         $series['episodes'][] = $episode;
                     }
                 }
@@ -119,11 +115,15 @@ class Utils
      * @param int $cur
      * @param int $total
      *
-     * @return float
+     * @return float|int
      */
-    public static function getPercentage(int $cur, int $total): float
+    public static function getPercentage(int $cur, int $total): float|int
     {
         // hide warning division by zero
+        if ($total === 0) {
+            return 0;
+        }
+
         return round(@($cur / $total * 100));
     }
 
@@ -134,7 +134,7 @@ class Utils
      */
     public static function newLine(): string
     {
-        if (php_sapi_name() == "cli") {
+        if (php_sapi_name() == 'cli') {
             return "\n";
         }
 
@@ -142,28 +142,22 @@ class Utils
     }
 
     /**
-     * @param RequestInterface $request
-     * @param int              $downloadedBytes
-     * @param int|null         $totalBytes
+     * @param int      $downloadedBytes
+     * @param int|null $totalBytes
      *
      * @return void
      */
     public static function showProgressBar(
-        RequestInterface $request,
         int $downloadedBytes,
-        int $totalBytes = null
+        ?int $totalBytes = null
     ): void {
         if (php_sapi_name() == 'cli') {
-            $request->getEmitter()->on('progress', function (ProgressEvent $e) use ($downloadedBytes, $totalBytes) {
-                $totalBytes = $totalBytes ?? $e->downloadSize;
-
-                printf(
-                    "> Downloaded %s of %s (%d%%)\r",
-                    Utils::formatBytes($e->downloaded + $downloadedBytes),
-                    Utils::formatBytes($totalBytes),
-                    Utils::getPercentage($e->downloaded + $downloadedBytes, $totalBytes)
-                );
-            });
+            printf(
+                "> Downloaded %s of %s (%d%%)\r",
+                Utils::formatBytes($downloadedBytes),
+                Utils::formatBytes($totalBytes),
+                Utils::getPercentage($downloadedBytes, $totalBytes)
+            );
         }
     }
 
