@@ -45,7 +45,7 @@ readonly class VimeoRepository
 
         preg_match('/"streams":(\[{.+?}])/', $content, $streams);
 
-        preg_match('/"(?:google_skyfire|akfire_interconnect_quic)":({.+?})/', $content, $cdns);
+        preg_match('/"(?:google_skyfire|akfire_interconnect_quic)":({.+?avc_url.+?})/', $content, $cdns);
 
         return (new VideoDTO)
             ->setMasterUrl(json_decode($cdns[1], true)['url'])

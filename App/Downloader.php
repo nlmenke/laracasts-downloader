@@ -94,8 +94,8 @@ class Downloader
     {
         Utils::box('Authenticating');
 
-        if (empty($email) or empty($password)) {
-            throw new LoginException('No EMAIL and PASSWORD is set in .env file');
+        if (empty($email) || empty($password)) {
+            throw new LoginException('No EMAIL and/or PASSWORD is set in .env file');
         }
 
         $user = $this->client->login($email, $password);

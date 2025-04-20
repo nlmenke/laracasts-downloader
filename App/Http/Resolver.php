@@ -120,8 +120,6 @@ xml;
     public function downloadEpisode(string $seriesSlug, array $episode): bool
     {
         try {
-            $number = sprintf('%02d', $episode['number']);
-            $name = $episode['title'];
             $filepath = $this->getFilename($episode);
 
             if (file_exists($filepath . '.mp4')) {
@@ -131,13 +129,13 @@ xml;
             Utils::writeln(
                 sprintf(
                     'Download started: %s...',
-                    $number . ' - ' . $name
+                    $filepath
                 )
             );
 
             $source = $_ENV['DOWNLOAD_SOURCE'];
 
-            if (! $source or $source === 'laracasts') {
+            if (! $source || $source === 'laracasts') {
                 $downloadLink = $this->getLaracastsLink($seriesSlug, $episode['number']);
 
                 $isDownloaded = $this->downloadVideo($downloadLink, $filepath . '.mp4');
@@ -147,7 +145,9 @@ xml;
                 $isDownloaded = $vimeoDownloader->download($episode['vimeo_id'], $filepath . '.mp4');
             }
 
-            $this->createEpisodeNfoFile($episode, $filepath);
+            if ($isDownloaded) {
+                $this->createEpisodeNfoFile($episode, $filepath);
+            }
 
             return $isDownloaded;
         } catch (RequestException $e) {

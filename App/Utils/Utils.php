@@ -35,7 +35,7 @@ class Utils
      */
     public static function cleanNameForWindows(string $name): ?string
     {
-        return preg_replace('/[^A-Za-z0-9\- _]/', '', $name);
+        return preg_replace('/[^A-Za-z0-9`~!@#$%^&()\-_+=[\]{};\',.\/ ]/', '', $name);
     }
 
     /**

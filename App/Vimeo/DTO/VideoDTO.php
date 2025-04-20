@@ -54,11 +54,11 @@ class VideoDTO
     }
 
     /**
-     * @param string $masterUrl
+     * @param string|null $masterUrl
      *
      * @return $this
      */
-    public function setMasterUrl(string $masterUrl): VideoDTO
+    public function setMasterUrl(?string $masterUrl): VideoDTO
     {
         $this->masterUrl = $masterUrl;
 

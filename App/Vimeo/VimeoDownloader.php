@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace App\Vimeo;
 
 use App\Utils\Utils;
+use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -51,28 +52,34 @@ class VimeoDownloader
             return true;
         }
 
-        $video = $this->repository->get($vimeoId);
+        try {
+            $video = $this->repository->get($vimeoId);
 
-        $master = $this->repository->getMaster($video);
+            $master = $this->repository->getMaster($video);
 
-        $sources = [];
-        $sources[] = $master->getVideoById($video->getVideoIdByQuality());
-        $sources[] = $master->getAudio();
+            $sources = [];
+            $sources[] = $master->getVideoById($video->getVideoIdByQuality());
+            $sources[] = $master->getAudio();
 
-        $filenames = [];
+            $filenames = [];
 
-        foreach ($sources as $source) {
-            $filename = $master->getClipId() . $source['extension'];
+            foreach ($sources as $source) {
+                $filename = $master->getClipId() . $source['extension'];
 
-            $this->downloadSource(
-                $master->resolveUrl($source['base_url']),
-                $source,
-                $filename
-            );
-            $filenames[] = $filename;
+                $this->downloadSource(
+                    $master->resolveUrl($source['base_url']),
+                    $source,
+                    $filename
+                );
+                $filenames[] = $filename;
+            }
+
+            return $this->mergeSources($filenames[0], $filenames[1], $filepath);
+        } catch (Exception $e) {
+            echo $e->getMessage() . PHP_EOL;
+
+            return false;
         }
-
-        return $this->mergeSources($filenames[0], $filenames[1], $filepath);
     }
 
     /**
